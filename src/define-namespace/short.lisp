@@ -4,12 +4,10 @@
 
 (in-package #:in-nomine)
 
-(defun %define-namespace-short-form (name &optional
-                                            (value-type 't)
-                                            (letp t letpp)
-                                            documentation)
+(defun %define-namespace-short-form
+    (name &optional (value-type 't) (letp t letpp) documentation)
   (when (and letpp letp)
-    (warn "Deprecated option BINDING true in DEFINE-NAMESPACE: ~
+    (warn "Deprecated option BINDING used in DEFINE-NAMESPACE: ~
            no binding form was generated."))
   (check-name-not-in-cl-package name)
   (check-redefine-meta-namespace name)
@@ -25,5 +23,6 @@
        ,@(make-boundp-forms namespace)
        ,@(make-makunbound-forms namespace)
        ,@(make-documentation-forms namespace documentation)
+       ,@(make-binding-table-var-forms namespace)
+       ,@(make-documentation-table-var-forms namespace)
        (symbol-namespace ',name))))
-

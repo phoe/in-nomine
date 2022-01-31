@@ -12,6 +12,7 @@
                 #:*namespaces*
                 #:ensure-namespace)
   (:import-from #:alexandria
+                #:type=
                 #:ignore-some-conditions)
   (:import-from #:introspect-environment
                 #:typexpand-1)
@@ -39,6 +40,49 @@
     (is (eq ns1 ns5))
     (is (eq ns1 ns6))))
 
+;;; Condition tests
+
+(test makunbound-metanamespace
+  (multiple-value-bind (value condition)
+      (ignore-errors (namespace-makunbound 'namespace))
+    (is (null value))
+    (is (typep condition 'error))
+    (is (string= (princ-to-string condition)
+                 (format nil "Unable to remove the NAMESPACE namespace.")))))
+
+(test short-form-deprecation-warning
+  (multiple-value-bind (value condition)
+      (ignore-some-conditions (warning)
+        (macroexpand-1 `(define-namespace test-warning-namespace t t)))
+    (is (null value))
+    (is (typep condition 'warning))
+    (is (string= (princ-to-string condition)
+                 (format nil "Deprecated option BINDING used in ~
+                              DEFINE-NAMESPACE: no binding form was ~
+                              generated.")))))
+
+(test macroexpansion-time-errors
+  (multiple-value-bind (value condition)
+      (ignore-errors (macroexpand-1 `(define-namespace cl:car t)))
+    (is (null value))
+    (is (typep condition 'error))
+    (is (string= (princ-to-string condition)
+                 (format nil "~S is a standard Common Lisp symbol and it ~
+                              cannot be used as a namespace name."
+                         'cl:car))))
+  (multiple-value-bind (value condition)
+      (ignore-errors
+       (flet ((validate-restart (condition)
+                (let ((restart (find-restart 'continue condition)))
+                  (is (string= (princ-to-string restart)
+                               "Redefine the namespace.")))))
+         (handler-bind ((error #'validate-restart))
+           (macroexpand-1 `(define-namespace namespace t)))))
+    (is (null value))
+    (is (typep condition 'error))
+    (is (string= (princ-to-string condition)
+                 (format nil "Attempting to redefine namespace NAMESPACE.")))))
+
 ;;; Metanamespace
 
 (defmacro with-namespace ((name value) &body body)
@@ -63,7 +107,7 @@
                  (is (eq 'yet-another-namespace (cell-error-name condition)))))
           (signals unbound-namespace
             (handler-bind ((unbound-namespace #'verify-cell-error-name))
-              (funcall (funcall accessor 'yet-another-namespace)))))
+              (funcall accessor 'yet-another-namespace))))
         ;; No tests for writer, boundp, and makunbound, because the NAMESPACE
         ;; namespace does not have them.
         ))
@@ -118,7 +162,7 @@
                  (is (eq 'that-thing (cell-error-name condition)))))
           (signals unbound-thing
             (handler-bind ((unbound-thing #'verify-cell-error-name))
-              (funcall (funcall accessor 'that-thing)))))
+              (funcall accessor 'that-thing))))
         ;; Binding table
         (let ((binding-table (namespace-binding-table namespace)))
           (is (hash-table-p binding-table))
@@ -159,7 +203,7 @@
     ;; Type name
     (let ((type-name (namespace-type-name namespace)))
       (is (eq 'thing-type type-name))
-      (is (alexandria:type= 'keyword type-name)))
+      (is (type= 'keyword type-name)))
     ;; Type
     (let ((value-type (namespace-value-type namespace)))
       (is (eq 'keyword value-type)))
@@ -194,7 +238,9 @@
                                :errorp-arg-in-accessor-p t
                                :default-arg-in-accessor-p t
                                :hash-table-test equal
-                               :documentation "Stuff."))
+                               :documentation "Stuff."
+                               :binding-table-var *binding-stuff*
+                               :documentation-table-var *documentation-stuff*))
     ;; Return value of DEFINE-NAMESPACE
     (is (typep namespace 'namespace))
     ;; Name
@@ -211,11 +257,12 @@
                  (is (equal "key-2" (cell-error-name condition)))))
           (signals not-enough-stuff
             (handler-bind ((not-enough-stuff #'verify-cell-error-name))
-              (funcall (funcall accessor "key-2")))))
+              (funcall accessor "key-2"))))
         ;; Binding table
         (let ((binding-table (namespace-binding-table namespace)))
           (is (hash-table-p binding-table))
-          (is (eq "value-1" (gethash "key-1" binding-table))))
+          (is (eq "value-1" (gethash "key-1" binding-table)))
+          (is (eq binding-table (symbol-value '*binding-stuff*))))
         ;; Boundp
         (let ((boundp-symbol (namespace-boundp-symbol namespace)))
           (is (eq 'stuff-exists-p boundp-symbol))
@@ -250,7 +297,7 @@
     ;; Type name
     (let ((type-name (namespace-type-name namespace)))
       (is (eq 'stuff type-name))
-      (is (alexandria:type= 'string type-name)))
+      (is (type= 'string type-name)))
     ;; Type
     (let ((value-type (namespace-value-type namespace)))
       (is (eq 'string value-type)))
@@ -263,7 +310,8 @@
     ;; Documentation table
     (let ((documentation-table (namespace-documentation-table namespace)))
       (is (hash-table-p documentation-table))
-      (is (string= "docs" (gethash "key" documentation-table))))))
+      (is (string= "docs" (gethash "key" documentation-table)))
+      (is (eq documentation-table (symbol-value '*documentation-stuff*))))))
 
 (test long-form-default-values
   (with-namespace (namespace (define-namespace default
@@ -355,46 +403,3 @@
                                  (intern-eql-specializer 'empty)))
              (method (find-method #'(setf documentation) '() specializers nil)))
         (is (null method))))))
-
-;;; Condition tests
-
-(test makunbound-metanamespace
-  (multiple-value-bind (value condition)
-      (ignore-errors (namespace-makunbound 'namespace))
-    (is (null value))
-    (is (typep condition 'error))
-    (is (string= (princ-to-string condition)
-                 (format nil "Unable to remove the NAMESPACE namespace.")))))
-
-(test short-form-deprecation-warning
-  (multiple-value-bind (value condition)
-      (ignore-some-conditions (warning)
-        (macroexpand-1 `(define-namespace test-warning-namespace t t)))
-    (is (null value))
-    (is (typep condition 'warning))
-    (is (string= (princ-to-string condition)
-                 (format nil "Deprecated option BINDING true in ~
-                              DEFINE-NAMESPACE: no binding form was ~
-                              generated.")))))
-
-(test macroexpansion-time-errors
-  (multiple-value-bind (value condition)
-      (ignore-errors (macroexpand-1 `(define-namespace cl:car t)))
-    (is (null value))
-    (is (typep condition 'error))
-    (is (string= (princ-to-string condition)
-                 (format nil "~S is a standard Common Lisp symbol and it ~
-                              cannot be used as a namespace name."
-                         'cl:car))))
-  (multiple-value-bind (value condition)
-      (ignore-errors
-       (flet ((validate-restart (condition)
-                (let ((restart (find-restart 'continue condition)))
-                  (is (string= (princ-to-string restart)
-                               "Redefine the namespace.")))))
-         (handler-bind ((error #'validate-restart))
-           (macroexpand-1 `(define-namespace namespace t)))))
-    (is (null value))
-    (is (typep condition 'error))
-    (is (string= (princ-to-string condition)
-                 (format nil "Attempting to redefine namespace NAMESPACE.")))))
