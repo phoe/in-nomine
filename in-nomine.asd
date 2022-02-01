@@ -9,7 +9,7 @@
   :version "1.0"
   :author ("Masataro Asai <guicho2.71828@gmail.com>"
            "Michał \"phoe\" Herda <phoe@disroot.org>")
-  :mailto "guicho2.71828@gmail.com"
+  :mailto "phoe@disroot.org"
   :license "LLGPL"
   :depends-on (#:alexandria)
   :pathname "src"
@@ -35,7 +35,7 @@
 (defsystem #:in-nomine/test
   :author ("Masataro Asai <guicho2.71828@gmail.com>"
            "Michał \"phoe\" Herda <phoe@disroot.org>")
-  :mailto "guicho2.71828@gmail.com"
+  :mailto "phoe@disroot.org"
   :description "test system for in-nomine"
   :license "LLGPL"
   :depends-on (#:in-nomine
