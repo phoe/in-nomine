@@ -76,13 +76,14 @@
     (when makunbound
       `((defun ,makunbound (name)
           "Automatically defined makunbound function."
-          ,@(if (eq name 'namespace)
-                `((declare (ignore name))
-                  (error "Unable to remove the NAMESPACE namespace."))
-                `((let* ((namespace (symbol-namespace ',name))
-                         (hash-table (namespace-binding-table namespace)))
-                    (remhash name hash-table)
-                    name))))))))
+          (,@(if (eq name 'namespace)
+                 `(progn)
+                 `(if (eq name 'namespace)
+                      (error "Unable to remove the NAMESPACE namespace.")))
+           (let* ((namespace (symbol-namespace ',name))
+                  (hash-table (namespace-binding-table namespace)))
+             (remhash name hash-table)
+             name)))))))
 
 (defun make-documentation-forms (namespace documentation)
   (let ((name (namespace-name namespace))
