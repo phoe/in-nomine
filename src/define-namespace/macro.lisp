@@ -4,7 +4,7 @@
 
 (in-package #:in-nomine)
 
-(defmacro define-namespace (name &rest args)
+(defmacro define-namespace (name &body args)
   (if (and (not (null args)) (keywordp (first args)))
       (apply #'%define-namespace-long-form name args)
       (apply #'%define-namespace-short-form name args)))
