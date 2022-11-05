@@ -199,6 +199,8 @@
         (accessor (namespace-accessor namespace)))
     (when name
       `((defmacro ,name (,g!name ,@lambda-list)
-          `(setf (,',accessor ',,g!name)
-                 (progn
-                   ,,@body)))))))
+          `(progn
+             (setf (,',accessor ',,g!name)
+                   (progn
+                     ,,@body))
+             ',,g!name))))))
