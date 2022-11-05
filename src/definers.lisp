@@ -170,7 +170,7 @@
                                (setf (gethash name hash-table)
                                      newval))))))))))))))
 
-;;; Writer foms
+;;; Writer forms
 
 (defun make-writer-forms (namespace)
   (let ((name (namespace-name namespace))
@@ -188,3 +188,17 @@
           (let* ((namespace (symbol-namespace ',name))
                  (hash-table (namespace-binding-table namespace)))
             (setf (gethash name hash-table) new-value)))))))
+
+;;; Definer forms
+
+(defun make-definer-forms (namespace)
+  (let ((g!name (gensym "name"))
+        (name (namespace-definer-name namespace))
+        (lambda-list (namespace-definer-lambda-list namespace))
+        (body (namespace-definer-body namespace))
+        (accessor (namespace-accessor namespace)))
+    (when name
+      `((defmacro ,name (,g!name ,@lambda-list)
+          `(setf (,',accessor ',,g!name)
+                 (progn
+                   ,,@body)))))))

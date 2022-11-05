@@ -42,6 +42,10 @@
     (binding-table             (e) :type (or null hash-table))
     (documentation-table       (e) :type (or null hash-table))
     (binding-table-var         (e) :type symbol  :read-only t)
+    (definer-name              (e) :type symbol  :read-only t)
+    (definer-lambda-list       (e) :type list    :read-only t)
+
+    (definer-body              (e) :type t       :read-only t)
     (documentation-table-var   (e) :type symbol  :read-only t)))
 
 (defun check-namespace-parameters (namespace)
@@ -68,36 +72,56 @@
             (errorp-arg-in-accessor-p nil)
             (default-arg-in-accessor-p t)
             (binding-table-var nil)
+            (definer nil)
             (documentation-table-var nil)
             (documentation nil))
-  (let ((namespace (%make-namespace
-                    :name name :name-type name-type :value-type value-type
-                    :accessor accessor
-                    :condition-name condition-name :type-name type-name
-                    :makunbound-symbol makunbound-symbol
-                    :boundp-symbol boundp-symbol
-                    :error-when-not-found-p error-when-not-found-p
-                    :errorp-arg-in-accessor-p errorp-arg-in-accessor-p
-                    :default-arg-in-accessor-p default-arg-in-accessor-p
-                    :documentation-type (if documentation-type-p
-                                            documentation-type
-                                            name)
-                    :hash-table-test hash-table-test
-                    :binding-table
-                    (if (and (null accessor)
-                             (null makunbound-symbol)
-                             (null boundp-symbol))
-                        nil
-                        (make-hash-table :test hash-table-test))
-                    :documentation-table
-                    (if (and documentation-type-p (null documentation-type))
-                        nil
-                        (make-hash-table :test hash-table-test))
-                    :binding-table-var binding-table-var
-                    :documentation-table-var documentation-table-var
-                    :documentation documentation)))
-    (check-namespace-parameters namespace)
-    namespace))
+  (let ((definer-name? (and definer (not (listp (first definer))))))
+    (assert (or (not definer)
+                (if definer-name?
+                    (>= (length definer)
+                        3)
+                    (>= (length definer)
+                        2))))
+    (let ((namespace (%make-namespace
+                      :name name :name-type name-type :value-type value-type
+                      :accessor accessor
+                      :condition-name condition-name :type-name type-name
+                      :makunbound-symbol makunbound-symbol
+                      :boundp-symbol boundp-symbol
+                      :error-when-not-found-p error-when-not-found-p
+                      :errorp-arg-in-accessor-p errorp-arg-in-accessor-p
+                      :default-arg-in-accessor-p default-arg-in-accessor-p
+                      :documentation-type (if documentation-type-p
+                                              documentation-type
+                                              name)
+                      :hash-table-test hash-table-test
+                      :binding-table
+                      (if (and (null accessor)
+                               (null makunbound-symbol)
+                               (null boundp-symbol))
+                          nil
+                          (make-hash-table :test hash-table-test))
+                      :documentation-table
+                      (if (and documentation-type-p (null documentation-type))
+                          nil
+                          (make-hash-table :test hash-table-test))
+                      :binding-table-var binding-table-var
+                      :definer-name (when definer
+                                      (if definer-name?
+                                          (first definer)
+                                          (symbolicate '#:define- name)))
+                      :definer-lambda-list (when definer
+                                             (if definer-name?
+                                                 (second definer)
+                                                 (first definer)))
+                      :definer-body (when definer
+                                      (if definer-name?
+                                          (cddr definer)
+                                          (cdr definer)))
+                      :documentation-table-var documentation-table-var
+                      :documentation documentation)))
+      (check-namespace-parameters namespace)
+      namespace)))
 
 ;;; Instantiating the metanamespace
 
