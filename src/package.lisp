@@ -27,6 +27,9 @@
    #:namespace-documentation-table
    #:namespace-binding-table-var
    #:namespace-documentation-table-var
+   #:namespace-definer-name
+   #:namespace-definer-lambda-list
+   #:namespace-definer-body
    ;; Metanamespace accessors
    #:namespace
    #:symbol-namespace
