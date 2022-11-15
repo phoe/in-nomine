@@ -245,7 +245,7 @@
                                :documentation "Stuff."
                                :binding-table-var *binding-stuff*
                                :documentation-table-var *documentation-stuff*
-                               :definer (defstuff (x y) `(+ ,x ,y))))
+                               :definer (defstuff (x y) `(concatenate 'string ,x ,y))))
     ;; Return value of DEFINE-NAMESPACE
     (is (typep namespace 'namespace))
     ;; Name
@@ -321,9 +321,14 @@
     (is (eq 'defstuff (namespace-definer-name namespace)))
     (is (equal '(x y)
                (namespace-definer-lambda-list namespace)))
-    (is (equalp '(`(+ ,x ,y))  ; apparently quasiquotes are not `equal`, but
-                               ; only `equalp`, at least on SBCL
-                (namespace-definer-body namespace)))))
+    (is (equalp '(`(concatenate 'string ,x ,y))  ; apparently quasiquotes are
+                                        ; not `equal`, but only `equalp`, at
+                                        ; least on SBCL
+                (namespace-definer-body namespace)))
+    (is (fboundp 'defstuff))
+    (let ((some-stuff (eval '(defstuff "some-stuff" "Hello " "world"))))
+      (is (string= "Hello world" some-stuff))
+      (is (string= "Hello world" (string-stuff "some-stuff"))))))
 
 (test long-form-definer-default-name
   ;; Definer with default name
@@ -334,7 +339,8 @@
     (is (equal (namespace-definer-lambda-list namespace)
                '(x y)))
     (is (equalp (namespace-definer-body namespace)
-                '(`(+ ,x ,y))))))
+                '(`(+ ,x ,y))))
+    (is (fboundp 'define-default-definer))))
 
 (test long-form-default-values
   (with-namespace (namespace (define-namespace default
@@ -362,6 +368,7 @@
             namespace-definer-name 'nil
             namespace-definer-lambda-list 'nil
             namespace-definer-body 'nil)
+      (is (not (fboundp 'define-default)))
       (let ((binding-table (namespace-binding-table namespace)))
         (is (eq 'eq (hash-table-test binding-table)))
         (is (= 0 (hash-table-count binding-table))))
