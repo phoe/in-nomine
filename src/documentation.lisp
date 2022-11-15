@@ -41,7 +41,8 @@ Two forms of this macro are provided:
             MAKUNBOUND-SYMBOL BOUNDP-SYMBOL DOCUMENTATION-TYPE
             ERROR-WHEN-NOT-FOUND-P ERRORP-ARG-IN-ACCESSOR-P
             DEFAULT-ARG-IN-ACCESSOR-P HASH-TABLE-TEST
-            BINDING-TABLE-VAR DOCUMENTATION-TABLE-VAR DOCUMENTATION)
+            BINDING-TABLE-VAR DOCUMENTATION-TABLE-VAR DOCUMENTATION
+            DEFINER)
     * NAME - a symbol naming the namespace,
     * NAME-TYPE - a type specifiers for keys bound in this namespace,
     * VALUE-TYPE - a type specifier for values bound in this namespace,
@@ -79,6 +80,11 @@ Two forms of this macro are provided:
                                 be the documentation table of the namespace, or
                                 NIL if no such variable should be defined,
     * DOCUMENTATION - documentation string for the namespace object.
+    * DEFINER - a list of the form ([DEFINER-NAME] LAMBDA-LIST BODY);
+                will define a macro of the name DEFINER-NAME, defaulting to
+                DEFINE-[NAME] if it is omitted; with lambda list
+                (OBJECT-NAME . LAMBDA-LIST) where OBJECT-NAME is a gensym; and a
+                body setting OBJECT-NAME in the namespace to the result of BODY.
 \
 The consequences are undefined if a namespace is redefined in an incompatible
 way with the previous one."
