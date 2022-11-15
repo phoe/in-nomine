@@ -220,6 +220,10 @@
     ;; Documentation
     (is (string= "A thing namespace." (documentation 'thing 'namespace)))
     (is (string= "A thing namespace." (documentation namespace 't)))
+    ;; Definer
+    (is (null (namespace-definer-name namespace)))
+    (is (null (namespace-definer-lambda-list namespace)))
+    (is (null (namespace-definer-body namespace)))
     (clear-namespace 'thing)))
 
 ;;; Long form tests
@@ -240,7 +244,8 @@
                                :hash-table-test equal
                                :documentation "Stuff."
                                :binding-table-var *binding-stuff*
-                               :documentation-table-var *documentation-stuff*))
+                               :documentation-table-var *documentation-stuff*
+                               :definer (defstuff (x y) `(+ ,x ,y))))
     ;; Return value of DEFINE-NAMESPACE
     (is (typep namespace 'namespace))
     ;; Name
@@ -311,7 +316,25 @@
     (let ((documentation-table (namespace-documentation-table namespace)))
       (is (hash-table-p documentation-table))
       (is (string= "docs" (gethash "key" documentation-table)))
-      (is (eq documentation-table (symbol-value '*documentation-stuff*))))))
+      (is (eq documentation-table (symbol-value '*documentation-stuff*))))
+    ;; Definer
+    (is (eq 'defstuff (namespace-definer-name namespace)))
+    (is (equal '(x y)
+               (namespace-definer-lambda-list namespace)))
+    (is (equalp '(`(+ ,x ,y))  ; apparently quasiquotes are not `equal`, but
+                               ; only `equalp`, at least on SBCL
+                (namespace-definer-body namespace)))))
+
+(test long-form-definer-default-name
+  ;; Definer with default name
+  (with-namespace (namespace (define-namespace default-definer
+                               :definer ((x y) `(+ ,x ,y))))
+    (is (eq (namespace-definer-name namespace)
+            'define-default-definer))
+    (is (equal (namespace-definer-lambda-list namespace)
+               '(x y)))
+    (is (equalp (namespace-definer-body namespace)
+                '(`(+ ,x ,y))))))
 
 (test long-form-default-values
   (with-namespace (namespace (define-namespace default
@@ -335,7 +358,10 @@
             namespace-hash-table-test 'eq
             namespace-error-when-not-found-p 't
             namespace-errorp-arg-in-accessor-p 'nil
-            namespace-default-arg-in-accessor-p 't)
+            namespace-default-arg-in-accessor-p 't
+            namespace-definer-name 'nil
+            namespace-definer-lambda-list 'nil
+            namespace-definer-body 'nil)
       (let ((binding-table (namespace-binding-table namespace)))
         (is (eq 'eq (hash-table-test binding-table)))
         (is (= 0 (hash-table-count binding-table))))
@@ -365,7 +391,8 @@
                                :hash-table-test nil
                                :error-when-not-found-p nil
                                :errorp-arg-in-accessor-p nil
-                               :default-arg-in-accessor-p nil))
+                               :default-arg-in-accessor-p nil
+                               :definer nil))
     (macrolet ((frob (&rest args)
                  (loop for (accessor expected) on args by #'cddr
                        collect `(is (eq ,expected (,accessor namespace)))
@@ -385,7 +412,10 @@
             namespace-errorp-arg-in-accessor-p nil
             namespace-default-arg-in-accessor-p nil
             namespace-binding-table nil
-            namespace-documentation-table nil)
+            namespace-documentation-table nil
+            namespace-definer-name nil
+            namespace-definer-lambda-list nil
+            namespace-definer-body nil)
       (is (namespace-boundp 'empty))
       (is (not (fboundp 'symbol-empty)))
       (is (not (fboundp 'symbol-makunbound)))
