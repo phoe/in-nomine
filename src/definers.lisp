@@ -77,9 +77,9 @@
       `((defun ,makunbound (name)
           "Automatically defined makunbound function."
           (,@(if (eq name 'namespace)
-                 `(progn)
                  `(if (eq name 'namespace)
-                      (error "Unable to remove the NAMESPACE namespace.")))
+                      (error "Unable to remove the NAMESPACE namespace."))
+                 `(progn))
            (let* ((namespace (symbol-namespace ',name))
                   (hash-table (namespace-binding-table namespace)))
              (remhash name hash-table)
