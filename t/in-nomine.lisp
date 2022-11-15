@@ -340,7 +340,10 @@
                '(x y)))
     (is (equalp (namespace-definer-body namespace)
                 '(`(+ ,x ,y))))
-    (is (fboundp 'define-default-definer))))
+    (is (fboundp 'define-default-definer))
+    (let ((some-val (eval '(define-default-definer something 3 4))))
+      (is (= 7 some-val))
+      (is (= 7 (symbol-default-definer 'something))))))
 
 (test long-form-default-values
   (with-namespace (namespace (define-namespace default
