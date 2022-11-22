@@ -80,11 +80,24 @@ Two forms of this macro are provided:
                                 be the documentation table of the namespace, or
                                 NIL if no such variable should be defined,
     * DOCUMENTATION - documentation string for the namespace object.
-    * DEFINER - a list of the form ([DEFINER-NAME] LAMBDA-LIST BODY);
-                will define a macro of the name DEFINER-NAME, defaulting to
-                DEFINE-[NAME] if it is omitted; with lambda list
-                (OBJECT-NAME . LAMBDA-LIST) where OBJECT-NAME is a gensym; and a
-                body setting OBJECT-NAME in the namespace to the result of BODY.
+    * DEFINER-NAME - name of the definer for a definition in the namespace; defaults to DEFINE-[NAME] if a definer is to be defined
+    * DEFINER - can have one of several forms, defines a macro with name
+                [DEFINER-NAME] whose lambda list always starts with a gensymed
+                argument BINDING-NAME for the name of the defined binding
+      * NIL - if no DEFINER-NAME is given, don't define a definer, otherwise
+              define a standard definer with argument list BINDING-NAME OBJECT
+              that binds BINDING-NAME to the result of evaluating OBJECT
+      * T - like NIL, but also defines a definer if DEFINER-NAME has not been
+            supplied
+      * [FUNCTION], '[FUNCTION], #'[FUNCTION] - define a definer with
+                      argument-list BINDING-NAME [LAMBDA-LIST-OF-FUNCTION],
+                      which binds BINDING-NAME to the result of calling
+                      [FUNCTION] on the rest of the arguments
+      * (LAMBDA (ARGS) BODY*) - same as with named functions, but with the given
+                                anonymous function
+      * (LAMBDA-LIST BODY*) - the lambda list can be a generalized lambda list;
+                              body should evaluate to the code executed to
+                              produce the object to bind BINDING-NAME to
 \
 The consequences are undefined if a namespace is redefined in an incompatible
 way with the previous one."
