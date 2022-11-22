@@ -331,7 +331,6 @@
       (is (string= "Hello world" (string-stuff "some-stuff"))))))
 
 (test long-form-definer-default-name
-  ;; Definer with default name
   (with-namespace (namespace (define-namespace default-definer
                                :definer ((x y) `(+ ,x ,y))))
     (is (eq (namespace-definer-name namespace)

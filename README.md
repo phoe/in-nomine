@@ -93,6 +93,21 @@ It is possible to utilize different name types along with all four standard hash
 * `EQUAL` for strings or lists,
 * `EQUALP` for strings without case sensitivity.
 
+It is possible to define a definer macro for the namespace.
+
+```lisp
+IN-NOMINE> (define-namespace game
+             :definer (defgame (score1 score2)
+                        `(cons ,score1 ,score2)))
+#<NAMESPACE GAME (0 bindings)>
+
+IN-NOMINE> (defgame some-game 8 3)
+(8 . 3)
+
+IN-NOMINE> (symbol-game 'some-game)
+(8 . 3)
+```
+
 In Nomine by default provides documentation types with the same names as namespace names.
 
 ```lisp

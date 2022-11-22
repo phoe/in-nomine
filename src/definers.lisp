@@ -213,7 +213,6 @@
                                               (eq a '&optional)))
                                         rest)))))
           (&rest
-           (print "huhu!")
            (values arglist (first rest)
                    '()
                    (mapcar #'car-or-x
@@ -229,7 +228,7 @@
                      k/o-args)))))
       (values '() nil '() '())))
 
-(defun construct-function-definer-form (function name accessor place)
+(defun construct-function-definer-form (function name accessor)
   (let ((g!name (gensym "name")))
     (multiple-value-bind (arglist rest-argument normal-args k/o-args)
         (normalize-arglist (if (symbolp function)
@@ -263,15 +262,15 @@
              `(setf (,',accessor ',,g!name)
                     ,obj))))
         (symbol
-         `(,(construct-function-definer-form definer name accessor g!name)))
+         `(,(construct-function-definer-form definer name accessor)))
         (list
          (etypecase (first definer)
            ((or (eql function)
                 (eql quote))
             `(,(construct-function-definer-form (second definer)
-                                                name accessor g!name)))
+                                                name accessor)))
            ((eql lambda)
-            `(,(construct-function-definer-form definer name accessor g!name)))
+            `(,(construct-function-definer-form definer name accessor)))
            (list
             `((defmacro ,name (,g!name ,@(first definer))
                 (let ((g!object (gensym "object")))
