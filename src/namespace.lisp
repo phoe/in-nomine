@@ -55,17 +55,15 @@
       (error "Cannot provide ERRORP-ARG-IN-ACCESSOR-P when CONDITION-NAME ~
               is null."))))
 
-#+nil
 (defun check-namespace-definer-spec (definer)
-  (when (and definer  ; definer is supposed to be defined
-             (not (listp (car definer))))  ; and it's first argument is not the
-                                        ; lambda list
-    (cond
-      ((null (cdr definer))
-       (error "Malformed definer specification: No lambda list provided."))
-      ((not (symbolp (car definer)))
-       (error "Malformed definer specification: Definer name is not a ~
-               symbol.")))))
+  (or (symbolp definer)
+      (when (listp definer)
+        (case (first definer)
+          (function t)
+          (quote (symbolp definer))
+          (lambda (listp (second definer)))))
+      (error "Malformed definer ~S"
+             definer)))
 
 (defun make-namespace
     (name &key
@@ -86,7 +84,7 @@
             (definer nil)
             (documentation-table-var nil)
             (documentation nil))
-  ;; TODO: check that definer is not malformed
+  (check-namespace-definer-spec definer)
   (let* ((definer-name (or definer-name
                            (and definer (symbolicate '#:define- name))))
          (namespace (%make-namespace
