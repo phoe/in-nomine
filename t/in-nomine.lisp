@@ -222,8 +222,7 @@
     (is (string= "A thing namespace." (documentation namespace 't)))
     ;; Definer
     (is (null (namespace-definer-name namespace)))
-    (is (null (namespace-definer-lambda-list namespace)))
-    (is (null (namespace-definer-body namespace)))
+    (is (null (namespace-definer namespace)))
     (clear-namespace 'thing)))
 
 ;;; Long form tests
@@ -245,7 +244,8 @@
                                :documentation "Stuff."
                                :binding-table-var *binding-stuff*
                                :documentation-table-var *documentation-stuff*
-                               :definer (defstuff (x y) `(concatenate 'string ,x ,y))))
+                               :definer-name defstuff
+                               :definer t))
     ;; Return value of DEFINE-NAMESPACE
     (is (typep namespace 'namespace))
     ;; Name
@@ -319,28 +319,18 @@
       (is (eq documentation-table (symbol-value '*documentation-stuff*))))
     ;; Definer
     (is (eq 'defstuff (namespace-definer-name namespace)))
-    (is (equal '(x y)
-               (namespace-definer-lambda-list namespace)))
-    (is (equalp '(`(concatenate 'string ,x ,y))  ; apparently quasiquotes are
-                                        ; not `equal`, but only `equalp`, at
-                                        ; least on SBCL
-                (namespace-definer-body namespace)))
     (is (fboundp 'defstuff))
-    (let ((some-stuff (eval '(defstuff "some-stuff" "Hello " "world"))))
+    (let ((some-stuff (eval '(defstuff "some-stuff" "Hello world"))))
       (is (string= "Hello world" some-stuff))
       (is (string= "Hello world" (string-stuff "some-stuff"))))))
 
 (test long-form-definer-default-name
   (with-namespace (namespace (define-namespace default-definer
-                               :definer ((x y) `(+ ,x ,y))))
+                               :definer t))
     (is (eq (namespace-definer-name namespace)
             'define-default-definer))
-    (is (equal (namespace-definer-lambda-list namespace)
-               '(x y)))
-    (is (equalp (namespace-definer-body namespace)
-                '(`(+ ,x ,y))))
     (is (fboundp 'define-default-definer))
-    (let ((some-val (eval '(define-default-definer something 3 4))))
+    (let ((some-val (eval '(define-default-definer something 7))))
       (is (= 7 some-val))
       (is (= 7 (symbol-default-definer 'something))))))
 
@@ -368,8 +358,7 @@
             namespace-errorp-arg-in-accessor-p 'nil
             namespace-default-arg-in-accessor-p 't
             namespace-definer-name 'nil
-            namespace-definer-lambda-list 'nil
-            namespace-definer-body 'nil)
+            namespace-definer 'nil)
       (is (not (fboundp 'define-default)))
       (let ((binding-table (namespace-binding-table namespace)))
         (is (eq 'eq (hash-table-test binding-table)))
@@ -401,6 +390,7 @@
                                :error-when-not-found-p nil
                                :errorp-arg-in-accessor-p nil
                                :default-arg-in-accessor-p nil
+                               :definer-name nil
                                :definer nil))
     (macrolet ((frob (&rest args)
                  (loop for (accessor expected) on args by #'cddr
@@ -423,8 +413,7 @@
             namespace-binding-table nil
             namespace-documentation-table nil
             namespace-definer-name nil
-            namespace-definer-lambda-list nil
-            namespace-definer-body nil)
+            namespace-definer nil)
       (is (namespace-boundp 'empty))
       (is (not (fboundp 'symbol-empty)))
       (is (not (fboundp 'symbol-makunbound)))
