@@ -43,9 +43,7 @@
     (documentation-table       (e) :type (or null hash-table))
     (binding-table-var         (e) :type symbol  :read-only t)
     (definer-name              (e) :type symbol  :read-only t)
-    (definer-lambda-list       (e) :type list    :read-only t)
-
-    (definer-body              (e) :type t       :read-only t)
+    (definer                   (e) :type t       :read-only t)
     (documentation-table-var   (e) :type symbol  :read-only t)))
 
 (defun check-namespace-parameters (namespace)
@@ -57,6 +55,7 @@
       (error "Cannot provide ERRORP-ARG-IN-ACCESSOR-P when CONDITION-NAME ~
               is null."))))
 
+#+nil
 (defun check-namespace-definer-spec (definer)
   (when (and definer  ; definer is supposed to be defined
              (not (listp (car definer))))  ; and it's first argument is not the
@@ -83,11 +82,13 @@
             (errorp-arg-in-accessor-p nil)
             (default-arg-in-accessor-p t)
             (binding-table-var nil)
+            (definer-name nil)
             (definer nil)
             (documentation-table-var nil)
             (documentation nil))
-  (check-namespace-definer-spec definer)
-  (let* ((definer-name? (and definer (not (listp (first definer)))))
+  ;; TODO: check that definer is not malformed
+  (let* ((definer-name (or definer-name
+                           (and definer (symbolicate '#:define- name))))
          (namespace (%make-namespace
                      :name name :name-type name-type :value-type value-type
                      :accessor accessor
@@ -112,18 +113,8 @@
                          nil
                          (make-hash-table :test hash-table-test))
                      :binding-table-var binding-table-var
-                     :definer-name (when definer
-                                     (if definer-name?
-                                         (first definer)
-                                         (symbolicate '#:define- name)))
-                     :definer-lambda-list (when definer
-                                            (if definer-name?
-                                                (second definer)
-                                                (first definer)))
-                     :definer-body (when definer
-                                     (if definer-name?
-                                         (cddr definer)
-                                         (cdr definer)))
+                     :definer-name definer-name
+                     :definer (or definer (and definer-name t))
                      :documentation-table-var documentation-table-var
                      :documentation documentation)))
     (check-namespace-parameters namespace)

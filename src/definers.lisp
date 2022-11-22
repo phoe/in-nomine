@@ -191,17 +191,92 @@
 
 ;;; Definer forms
 
+(defun car-or-x (x)
+  (if (consp x)
+      (car x)
+      x))
+
+(defun normalize-arglist (arglist)
+  "Makes sure the argument list contains an &REST parameter for &KEY and
+&OPTIONAL parameters"
+  (if arglist
+      (let ((first (first arglist))
+            (rest (rest arglist)))
+        (case first
+          ((&key &optional)
+           (let ((rest-arg (gensym "rest-arg")))
+             (values `(&rest ,rest-arg ,@arglist)
+                     rest-arg '()
+                     (mapcar #'car-or-x
+                             (remove-if (lambda (a)
+                                          (or (eq a '&key)
+                                              (eq a '&optional)))
+                                        rest)))))
+          (&rest
+           (print "huhu!")
+           (values arglist (first rest)
+                   '()
+                   (mapcar #'car-or-x
+                           (remove-if (lambda (a)
+                                        (or (eq a '&key)
+                                            (eq a '&optional)))
+                                      (rest rest)))))
+          (t
+           (multiple-value-bind (arglist rest-argument normal-args k/o-args)
+               (normalize-arglist rest)
+             (values (cons first arglist)
+                     rest-argument (cons first normal-args)
+                     k/o-args)))))
+      (values '() nil '() '())))
+
+(defun construct-function-definer-form (function name accessor place)
+  (let ((g!name (gensym "name")))
+    (multiple-value-bind (arglist rest-argument normal-args k/o-args)
+        (normalize-arglist (if (symbolp function)
+                               (arglist function)
+                               (if (and (listp function)
+                                        (eq (first function)
+                                            'lambda))
+                                   (second function)
+                                   (error "Malformed function name"))))
+      `(defmacro ,name (,g!name ,@arglist)
+         (declare ,@(mapcar (lambda (k/o-arg)
+                              `(ignore ,k/o-arg))
+                            k/o-args))
+         `(setf (,',accessor ',,g!name)
+                (,',(if (and (listp function)
+                             (eq (first function)
+                                 function))
+                        (second function)
+                        function)
+                 ,,@normal-args . ,,rest-argument))))))
+
 (defun make-definer-forms (namespace)
   (let ((g!name (gensym "name"))
         (name (namespace-definer-name namespace))
-        (lambda-list (namespace-definer-lambda-list namespace))
-        (body (namespace-definer-body namespace))
+        (definer (namespace-definer namespace))
         (accessor (namespace-accessor namespace)))
     (when name
-      `((defmacro ,name (,g!name ,@lambda-list)
-          (let ((g!object (gensym "object")))
-            `(let ((,g!object (progn
-                                ,,@body)))
-               (setf (,',accessor ',,g!name)
-                     ,g!object)
-               ,g!object)))))))
+      (typecase definer
+        ((eql t)
+         `((defmacro ,name (,g!name obj)
+             `(setf (,',accessor ',,g!name)
+                    ,obj))))
+        (symbol
+         `(,(construct-function-definer-form definer name accessor g!name)))
+        (list
+         (etypecase (first definer)
+           ((or (eql function)
+                (eql quote))
+            `(,(construct-function-definer-form (second definer)
+                                                name accessor g!name)))
+           ((eql lambda)
+            `(,(construct-function-definer-form definer name accessor g!name)))
+           (list
+            `((defmacro ,name (,g!name ,@(first definer))
+                (let ((g!object (gensym "object")))
+                  `(let ((,g!object (progn
+                                      ,,@(rest definer))))
+                     (setf (,',accessor ',,g!name)
+                           ,g!object)
+                     ,g!object)))))))))))
