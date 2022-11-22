@@ -22,7 +22,7 @@ A namespace is a second-class concept in Common Lisp and refers to concept that 
 Common Lisp has a lot of namespaces whose keys can come in various shapes:
 
 * variables and symbol macros (symbols),
-* functions anc macros (symbols),
+* functions and macros (symbols),
 * compiler macros (symbols),
 * classes, conditions, and types (symbols),
 * slot names (symbols),
