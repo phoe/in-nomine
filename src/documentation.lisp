@@ -42,7 +42,7 @@ Two forms of this macro are provided:
             ERROR-WHEN-NOT-FOUND-P ERRORP-ARG-IN-ACCESSOR-P
             DEFAULT-ARG-IN-ACCESSOR-P HASH-TABLE-TEST
             BINDING-TABLE-VAR DOCUMENTATION-TABLE-VAR DOCUMENTATION
-            DEFINER)
+            DEFINER-NAME DEFINER)
     * NAME - a symbol naming the namespace,
     * NAME-TYPE - a type specifiers for keys bound in this namespace,
     * VALUE-TYPE - a type specifier for values bound in this namespace,
