@@ -300,10 +300,26 @@
   (let ((let-name (namespace-let-name namespace))
         (accessor (namespace-macro-accessor namespace))
         (global-accessor (namespace-accessor namespace))
-        (test (namespace-hash-table-test namespace)))
+        (test (namespace-hash-table-test namespace))
+        (condition (namespace-condition-name namespace))
+        (default-errorp (namespace-error-when-not-found-p namespace))
+        (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
+        (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
     (when (and let-name accessor global-accessor)
-      `((defmacro ,accessor (name &rest args)
-          `(,',global-accessor ',name ,@args))
+      `((defmacro ,accessor (&whole form name
+                             &optional
+                               ,@(when errorp-arg-p `((errorp ,default-errorp)))
+                               ,@(when default-arg-p `((default nil))))
+          (declare (ignore ,@(when errorp-arg-p `(errorp))
+                           ,@(when default-arg-p `(default))))
+          ,(format nil
+                   "Automatically defined accessor macro.~%~
+                    ~:[Returns NIL~;Signals ~:*~S~] if the value is not found ~
+                    in the namespace~:[~;, unless ERRORP is set to false~].~
+                    ~:[~;~%When DEFAULT is supplied and the symbol is not ~
+                    bound, the default value is automatically set.~]"
+                   condition errorp-arg-p default-arg-p)
+          `(,',global-accessor ',name ,@(cddr form)))
         (defmacro ,let-name (bindings &body body)
           (multiple-value-bind (body declarations) (parse-body body)
             (let ((bindings (mapcar #'ensure-list bindings))
