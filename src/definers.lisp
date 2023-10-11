@@ -287,19 +287,24 @@
 
 ;;; Let form
 
+(defmacro mlet ((name lambda-list &body body) &body mlet-body
+                &environment env)
+  `(macrolet ((,name ,lambda-list
+                `(macrolet ((,',name (&whole form &rest args &environment env)
+                              (declare (ignore args))
+                              (funcall ,',(macro-function name env) form env)))
+                   ,(progn ,@body))))
+     ,@mlet-body))
+
 (defun make-let-forms (namespace)
   (let ((let-name (namespace-let-name namespace))
         (accessor (namespace-macro-accessor namespace))
-        (global-macro-accessor (gensym "GLOBAL-MACRO-ACCESSOR"))
-        (let-expander (gensym "NOMINE-LET-EXPANDER"))
         (global-accessor (namespace-accessor namespace))
         (test (namespace-hash-table-test namespace)))
     (when (and let-name accessor)
-      `((defmacro ,global-macro-accessor (name &rest args)
+      `((defmacro ,accessor (name &rest args)
           `(,',global-accessor ',name ,@args))
-        (defmacro ,accessor (name &rest args)
-          `(,',global-macro-accessor ,name ,@args))
-        (defun ,let-expander (outer-accessor bindings body)
+        (defmacro ,let-name (bindings &body body)
           (multiple-value-bind (body declarations) (parse-body body)
             (let ((bindings (mapcar #'ensure-list bindings))
                   (specials (remove-duplicates
@@ -308,8 +313,7 @@
                                                 when (eq type 'special)
                                                 append args))
                              :test ',test))
-                  (holders (make-gensym-list (length bindings) "VAR-HOLDER"))
-                  (inner-accessor (gensym "NAMESPACE-ACCESSOR")))
+                  (holders (make-gensym-list (length bindings) "VAR-HOLDER")))
               `(let (,@(loop for var-holder in holders
                              for (name value) in bindings
                              collect (if (member name specials :test ',test)
@@ -322,21 +326,15 @@
                                        append (if (member name specials :test ',test)
                                                   `((,',global-accessor ',name) ,value)
                                                   `(,var-holder ,value))))
-                        (macrolet ((,inner-accessor (name &rest args)
-                                     (switch (name :test ,',test)
-                                       ,@(loop for var-holder in holders
-                                               for (name nil) in bindings
-                                               unless (member name specials :test ',test)
-                                               collect `(',name ',var-holder))
-                                       (t `(,',outer-accessor ,name ,@args))))
-                                   (,',accessor (name &rest args)
-                                     `(,',inner-accessor ,name ,@args))
-                                   (,',let-name (bindings &body body)
-                                     (,',let-expander ',inner-accessor bindings body)))
+                        (mlet (,',accessor (name &rest args)
+                                (switch (name :test ,',test)
+                                  ,@(loop for var-holder in holders
+                                          for (name nil) in bindings
+                                          unless (member name specials :test ',test)
+                                          collect `(',name ',var-holder))
+                                  (t `(,',',accessor ,name ,@args))))
                           ,@body))
                    (psetf ,@(loop for (name nil) in bindings
                                   for var-holder in holders
                                   when (member name specials :test ',test)
-                                  append `((,',global-accessor ',name) ,var-holder))))))))
-        (defmacro ,let-name (bindings &body body)
-          (,let-expander ',global-macro-accessor bindings body))))))
+                                  append `((,',global-accessor ',name) ,var-holder))))))))))))
