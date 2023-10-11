@@ -296,16 +296,27 @@
                    ,(progn ,@body))))
      ,@mlet-body))
 
+(defun get-declared (declarations decl-type test)
+  (remove-duplicates
+   (loop for (nil . decls) in declarations
+         append (loop for (type . args) in decls
+                      when (eq type decl-type)
+                      append args))
+   :test test))
+
 (defun make-let-forms (namespace)
   (let ((let-name (namespace-let-name namespace))
         (accessor (namespace-macro-accessor namespace))
         (global-accessor (namespace-accessor namespace))
+        (boundp (namespace-boundp-symbol namespace))
+        (makunbound (namespace-makunbound-symbol namespace))
+        (namespace-name (namespace-name namespace))
         (test (namespace-hash-table-test namespace))
         (condition (namespace-condition-name namespace))
         (default-errorp (namespace-error-when-not-found-p namespace))
         (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
         (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
-    (when (and let-name accessor global-accessor)
+    (when (and let-name accessor global-accessor boundp makunbound)
       `((defmacro ,accessor (&whole form name
                              &optional
                                ,@(when errorp-arg-p `((errorp ,default-errorp)))
@@ -321,36 +332,51 @@
                    condition errorp-arg-p default-arg-p)
           `(,',global-accessor ',name ,@(cddr form)))
         (defmacro ,let-name (bindings &body body)
-          (multiple-value-bind (body declarations) (parse-body body)
-            (let ((bindings (mapcar #'ensure-list bindings))
-                  (specials (remove-duplicates
-                             (loop for (nil . decls) in declarations
-                                   append (loop for (type . args) in decls
-                                                when (eq type 'special)
-                                                append args))
-                             :test ',test))
-                  (holders (make-gensym-list (length bindings) "VAR-HOLDER")))
-              `(let (,@(loop for var-holder in holders
-                             for (name value) in bindings
-                             collect (if (member name specials :test ',test)
-                                         `(,var-holder (,',global-accessor ',name))
-                                         `(,var-holder))))
+          (multiple-value-bind (body decls) (parse-body body)
+            (let* ((specials (get-declared decls 'special ',test))
+                   (ignorables (get-declared decls 'ignorable ',test))
+                   (ignored (get-declared decls 'ignore ',test))
+                   (variables (loop for (name value) in (mapcar #'ensure-list bindings)
+                                    collect (list (gensym (with-standard-io-syntax
+                                                            (format nil "~A-~A"
+                                                                    ',namespace-name
+                                                                    name)))
+                                                  value
+                                                  name
+                                                  (member name specials :test ',test)
+                                                  (member name ignorables :test ',test)
+                                                  (member name ignored :test ',test))))
+                   (switch-clauses (loop for (var value name special-p ignorable-p ignore-p) in variables
+                                         unless special-p
+                                           collect `(',name ',var)))
+                   (unbound-marker (gensym (with-standard-io-syntax
+                                             (format nil "~A-UNBOUND" ',namespace-name)))))
+              `(let (,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                             collect (if special-p
+                                         `(,var (if (,',boundp ',name)
+                                                    (,',global-accessor ',name)
+                                                    ',unbound-marker))
+                                         `(,var))))
+                 (declare
+                  (ignorable ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                                     when (or ignore-p ignorable-p)
+                                       collect var)))
                  (unwind-protect
                       (progn
-                        (psetf ,@(loop for var-holder in holders
-                                       for (name value) in bindings
-                                       append (if (member name specials :test ',test)
-                                                  `((,',global-accessor ',name) ,value)
-                                                  `(,var-holder ,value))))
+                        (psetf ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                                       collect (if special-p
+                                                   `(,',global-accessor ',name)
+                                                   var)
+                                       collect value))
                         (mlet (,',accessor (name &rest args)
-                                (switch (name :test ,',test)
-                                  ,@(loop for var-holder in holders
-                                          for (name nil) in bindings
-                                          unless (member name specials :test ',test)
-                                          collect `(',name ',var-holder))
-                                  (t `(,',',accessor ,name ,@args))))
+                                ,(if switch-clauses  ; workaround alexandria's extra style-warning bug
+                                     `(switch (name :test ,',test)
+                                        ,@switch-clauses
+                                        (t `(,',',accessor ,name ,@args)))
+                                     ``(,',',accessor ,name ,@args)))
                           ,@body))
-                   (psetf ,@(loop for (name nil) in bindings
-                                  for var-holder in holders
-                                  when (member name specials :test ',test)
-                                  append `((,',global-accessor ',name) ,var-holder))))))))))))
+                   ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                           when special-p
+                             collect `(if (eq ,var ',unbound-marker)
+                                          (,',makunbound ',name)
+                                          (setf (,',global-accessor ',name) ,var))))))))))))
