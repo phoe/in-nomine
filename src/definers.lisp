@@ -287,6 +287,18 @@
 
 ;;; Let form
 
+(defmacro tmlet ((name lambda-list &body body) &body mlet-body
+                &environment env)
+  (let ((transfer (gensym "MLET-TRANSFER")))
+    `(macrolet ((,transfer (&rest args &environment env)
+                  (funcall ,(macro-function name env)
+                           `(,',name ,@args)
+                           env))
+                (,name ,lambda-list
+                  (let ((,name ',transfer))
+                    ,@body)))
+       ,@mlet-body)))
+
 (defmacro mlet ((name lambda-list &body body) &body mlet-body
                 &environment env)
   `(macrolet ((,name ,lambda-list
@@ -368,12 +380,12 @@
                                                    `(,',global-accessor ',name)
                                                    var)
                                        collect value))
-                        (mlet (,',accessor (name &rest args)
-                                ,(if switch-clauses  ; workaround alexandria's extra style-warning bug
-                                     `(switch (name :test ,',test)
-                                        ,@switch-clauses
-                                        (t `(,',',accessor ,name ,@args)))
-                                     ``(,',',accessor ,name ,@args)))
+                        (tmlet (,',accessor (name &rest args)
+                                 ,(if switch-clauses  ; workaround alexandria's extra style-warning bug
+                                      `(switch (name :test ,',test)
+                                         ,@switch-clauses
+                                         (t `(,,',accessor ,name ,@args)))
+                                      ``(,,',accessor ,name ,@args)))
                           ,@body))
                    ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
                            when special-p
