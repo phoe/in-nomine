@@ -301,7 +301,7 @@
         (accessor (namespace-macro-accessor namespace))
         (global-accessor (namespace-accessor namespace))
         (test (namespace-hash-table-test namespace)))
-    (when (and let-name accessor)
+    (when (and let-name accessor global-accessor)
       `((defmacro ,accessor (name &rest args)
           `(,',global-accessor ',name ,@args))
         (defmacro ,let-name (bindings &body body)
