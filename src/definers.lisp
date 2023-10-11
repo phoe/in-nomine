@@ -299,15 +299,6 @@
                     ,@body)))
        ,@mlet-body)))
 
-(defmacro mlet ((name lambda-list &body body) &body mlet-body
-                &environment env)
-  `(macrolet ((,name ,lambda-list
-                `(macrolet ((,',name (&whole form &rest args &environment env)
-                              (declare (ignore args))
-                              (funcall ,',(macro-function name env) form env)))
-                   ,(progn ,@body))))
-     ,@mlet-body))
-
 (defun get-declared (declarations decl-type test)
   (remove-duplicates
    (loop for (nil . decls) in declarations
