@@ -385,11 +385,10 @@
                                           (,',makunbound ',name)
                                           (setf (,',global-accessor ',name) ,var))))))))
         (defmacro ,macrolet-name (macrobindings &body body)
-          `(unwind-protect
-                (progn
-                  (tmlet (,',accessor (name &rest args)
-                           (switch (name :test ,',test)
-                             ,@(loop for (name form) in macrobindings
-                                     collect `(',name ',form))
-                             (t `(,,',accessor ,name ,@args))))
-                    ,@body))))))))
+          `(progn
+             (tmlet (,',accessor (name &rest args)
+                      (switch (name :test ,',test)
+                        ,@(loop for (name form) in macrobindings
+                                collect `(',name ',form))
+                        (t `(,,',accessor ,name ,@args))))
+               ,@body)))))))
