@@ -6,12 +6,9 @@
 
 (defun %define-namespace-short-form
     (name &optional (value-type 't) (letp t letpp) documentation)
-  (when (and letpp letp)
-    (warn "Deprecated option BINDING used in DEFINE-NAMESPACE: ~
-           no binding form was generated."))
   (check-name-not-in-cl-package name)
   (check-redefine-meta-namespace name)
-  (let ((namespace (ensure-namespace name :value-type value-type)))
+  (let ((namespace (ensure-namespace name :value-type value-type :binding letp)))
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (ensure-namespace ',name :value-type ',value-type)
        ,@(make-type-forms namespace)
