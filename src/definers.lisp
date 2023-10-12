@@ -380,7 +380,9 @@
                                          ,@switch-clauses
                                          (t `(,,',accessor ,name ,@args)))
                                       ``(,,',accessor ,name ,@args)))
-                          ,@body))
+                          (,',locally-name
+                           (declare (special ,@specials))
+                           ,@body)))
                    ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
                            when special-p
                              collect `(if (eq ,var ',unbound-marker)
