@@ -313,6 +313,7 @@
         (locally-name (namespace-locally-name namespace))
         (progv-name (namespace-progv-name namespace))
         (accessor (namespace-macro-accessor namespace))
+        (name (namespace-name namespace))
         (global-accessor (namespace-accessor namespace))
         (boundp (namespace-boundp-symbol namespace))
         (makunbound (namespace-makunbound-symbol namespace))
@@ -322,7 +323,12 @@
         (default-errorp (namespace-error-when-not-found-p namespace))
         (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
         (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
-    (when (and let-name accessor global-accessor boundp makunbound)
+    (when (or let-name macrolet-name locally-name progv-name accessor)
+      (setf let-name (or let-name (gensym (with-standard-io-syntax (format nil "~A-LET" name))))
+            macrolet-name (or macrolet-name (gensym (with-standard-io-syntax (format nil "~A-MACROLET" name))))
+            progv-name (or progv-name (gensym (with-standard-io-syntax (format nil "~A-PROGV" name))))
+            locally-name (or locally-name (gensym (with-standard-io-syntax (format nil "~A-LOCALLY" name))))
+            accessor (or accessor (gensym (symbol-name name))))
       `((defmacro ,accessor (&whole form name
                              &optional
                                ,@(when errorp-arg-p `((errorp ,default-errorp)))
