@@ -405,13 +405,15 @@
         (defmacro ,locally-name (&body body)
           (multiple-value-bind (body decls) (parse-body body)
             (let ((specials (get-declared decls 'special ',test)))
-              `(progn
-                 (tmlet (,',accessor (name &rest args)
-                          (switch (name :test ,',test)
-                            ,@(loop for name in specials
-                                    collect `(',name `(,',',global-accessor ',name ,@args)))
-                            (t `(,,',accessor ,name ,@args))))
-                   ,@body)))))
+              (if specials
+                  `(progn
+                     (tmlet (,',accessor (name &rest args)
+                              (switch (name :test ,',test)
+                                ,@(loop for name in specials
+                                        collect `(',name `(,',',global-accessor ',name ,@args)))
+                                (t `(,,',accessor ,name ,@args))))
+                       ,@body))
+                  `(progn ,@body)))))
         (defmacro ,progv-name (names values &body body)
           (with-gensyms (bind bindv save stack unbound-marker)
             `(let (,stack)
