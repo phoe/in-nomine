@@ -3,7 +3,8 @@
 ;;;;               2022 Michał "phoe" Herda (phoe@disroot.org)
 
 (uiop:define-package #:in-nomine
-  (:use #:cl #:alexandria #:trivial-arguments)
+  (:use #:cl #:alexandria)
+  (:local-nicknames (#:t #:trivial-arguments))
   (:export
    ;; Macros and utility functions
    #:define-namespace

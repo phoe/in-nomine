@@ -223,7 +223,7 @@
     (multiple-value-bind (arglist rest-argument normal-args k/o-args)
         (normalize-arglist (cond
                              ((symbolp function)
-                              (arglist function))
+                              (t:arglist function))
                              ((and (listp function)
                                    (eq (first function)
                                        'lambda))
