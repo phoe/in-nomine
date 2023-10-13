@@ -5,10 +5,10 @@
 (in-package #:in-nomine)
 
 (defun %define-namespace-short-form
-    (name &optional (value-type 't) (letp t letpp) documentation)
+    (name &optional (value-type 't) (binding t) documentation)
   (check-name-not-in-cl-package name)
   (check-redefine-meta-namespace name)
-  (let ((namespace (ensure-namespace name :value-type value-type :binding letp)))
+  (let ((namespace (ensure-namespace name :value-type value-type :binding binding)))
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (ensure-namespace ',name :value-type ',value-type)
        ,@(make-type-forms namespace)
