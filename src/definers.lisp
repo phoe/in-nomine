@@ -191,11 +191,6 @@
 
 ;;; Definer forms
 
-(defun car-or-x (x)
-  (if (consp x)
-      (car x)
-      x))
-
 (defun normalize-arglist (arglist)
   "Makes sure the argument list contains an &REST parameter for &KEY and
 &OPTIONAL parameters"
@@ -207,7 +202,7 @@
            (let ((rest-arg (gensym "rest-arg")))
              (values `(&rest ,rest-arg ,@arglist)
                      rest-arg '()
-                     (mapcar #'car-or-x
+                     (mapcar #'ensure-car
                              (remove-if (lambda (a)
                                           (or (eq a '&key)
                                               (eq a '&optional)))
@@ -215,7 +210,7 @@
           (&rest
            (values arglist (first rest)
                    '()
-                   (mapcar #'car-or-x
+                   (mapcar #'ensure-car
                            (remove-if (lambda (a)
                                         (or (eq a '&key)
                                             (eq a '&optional)))
