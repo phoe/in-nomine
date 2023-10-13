@@ -60,8 +60,10 @@
       (when (listp definer)
         (case (first definer)
           (function t)
-          (quote (symbolp definer))
-          (lambda (listp (second definer)))))
+          (quote (and (symbolp (second definer))
+                      (not (cddr definer))))
+          (lambda (listp (second definer)))
+          (t (listp (first definer)))))
       (error "Malformed definer ~S"
              definer)))
 
