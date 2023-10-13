@@ -194,34 +194,29 @@
 (defun normalize-arglist (arglist)
   "Makes sure the argument list contains an &REST parameter for &KEY and
 &OPTIONAL parameters"
-  (if arglist
-      (let ((first (first arglist))
-            (rest (rest arglist)))
-        (case first
-          ((&key &optional)
-           (let ((rest-arg (gensym "rest-arg")))
-             (values `(&rest ,rest-arg ,@arglist)
-                     rest-arg '()
-                     (mapcar #'ensure-car
-                             (remove-if (lambda (a)
-                                          (or (eq a '&key)
-                                              (eq a '&optional)))
-                                        rest)))))
-          (&rest
-           (values arglist (first rest)
-                   '()
-                   (mapcar #'ensure-car
-                           (remove-if (lambda (a)
-                                        (or (eq a '&key)
-                                            (eq a '&optional)))
-                                      (rest rest)))))
-          (t
-           (multiple-value-bind (arglist rest-argument normal-args k/o-args)
-               (normalize-arglist rest)
-             (values (cons first arglist)
-                     rest-argument (cons first normal-args)
-                     k/o-args)))))
-      (values '() nil '() '())))
+  (multiple-value-bind (required optional rest keywords allow-other-keys? aux
+                        keys?)
+      (parse-ordinary-lambda-list arglist
+                                  :normalize nil)
+    (let ((rest-arg (or rest (gensym "rest"))))
+      (values `(,@required
+                ,@(when optional
+                    `(&optional))
+                ,@optional
+                &rest ,rest-arg
+                ,@(when keys?
+                    `(&key))
+                ,@keywords
+                ,@(when allow-other-keys?
+                    `(&allow-other-keys))
+                ,@(when aux
+                    `(&aux))
+                ,@aux)
+              rest-arg
+              `(,@required ,@(mapcar #'ensure-car
+                                     optional))
+              (mapcar #'ensure-car
+                      keywords)))))
 
 (defun construct-function-definer-form (function name accessor)
   (let ((g!name (gensym "name")))
