@@ -313,7 +313,6 @@
         (locally-name (namespace-locally-name namespace))
         (progv-name (namespace-progv-name namespace))
         (accessor (namespace-macro-accessor namespace))
-        (name (namespace-name namespace))
         (global-accessor (namespace-accessor namespace))
         (boundp (namespace-boundp-symbol namespace))
         (makunbound (namespace-makunbound-symbol namespace))
