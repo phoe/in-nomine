@@ -56,16 +56,13 @@
               is null."))))
 
 (defun check-namespace-definer-spec (definer)
-  (or (symbolp definer)
-      (when (listp definer)
-        (case (first definer)
-          (function t)
-          (quote (and (symbolp (second definer))
-                      (not (cddr definer))))
-          (lambda (listp (second definer)))
-          (t (listp (first definer)))))
-      (error "Malformed definer ~S"
-             definer)))
+  (assert (typep definer '(or
+                           symbol
+                           (cons (eql function))
+                           (cons (eql quote) (cons symbol null))
+                           (cons (eql lambda) (cons list))
+                           (cons list)))
+          () "Malformed definer ~S" definer))
 
 (defun make-namespace
     (name &key
