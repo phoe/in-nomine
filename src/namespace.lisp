@@ -84,9 +84,10 @@
                                             name)
                     :hash-table-test hash-table-test
                     :binding-table
-                    (if (and (null accessor)
-                             (null makunbound-symbol)
-                             (null boundp-symbol))
+                    (if (or (and (null accessor)
+                                 (null makunbound-symbol)
+                                 (null boundp-symbol))
+                            binding-table-var)
                         nil
                         (make-hash-table :test hash-table-test))
                     :documentation-table
