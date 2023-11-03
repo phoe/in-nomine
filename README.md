@@ -25,6 +25,7 @@ Common Lisp has a lot of namespaces whose keys can come in various shapes:
 * variables and symbol macros (symbols),
 * functions and macros (symbols),
 * compiler macros (symbols),
+* `SETF` expansions (Lisp forms),
 * classes, conditions, and types (symbols),
 * slot names (symbols),
 * method combinations (symbols),

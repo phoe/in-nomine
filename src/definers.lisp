@@ -114,7 +114,7 @@
         (hash-table-test (namespace-hash-table-test namespace)))
     `(,@(when table-symbol
           `((declaim (type hash-table ,table-symbol))
-            (defparameter ,table-symbol
+            (defvar ,table-symbol
               (make-hash-table :test ',hash-table-test)))))))
 
 (defun make-documentation-table-var-forms (namespace)
