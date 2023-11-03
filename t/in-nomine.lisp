@@ -90,6 +90,7 @@
   ;;       happen when reevaluating DEFINE-NAMESPACE, which may happen when
   ;;       running the test suite multiple times in a row.
   `(let ((,name (handler-bind ((warning #'muffle-warning)) ,value)))
+     (declare (ignorable ,name))
      ,@body))
 
 (test metanamespace
@@ -490,7 +491,6 @@
 
 (test describe-object-in-namespace
   (with-namespace (namespace (define-namespace something))
-    (declare (ignore namespace))
     (let ((docstring "Namespace test - FOO to BAR in SOMETHING"))
       (setf (symbol-something :foo) :bar
             (documentation :foo 'something) docstring)
