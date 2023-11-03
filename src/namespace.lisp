@@ -17,11 +17,11 @@
 ;;;
 ;;; Null CONDITION-NAME: no condition is generated, and:
 ;;; * True ERRORP-ARG-IN-ACCESSOR-P:
-;;;  * compile-time-error
+;;;   * compile-time-error
 ;;; * True ERROR-WHEN-NOT-FOUND-P:
 ;;;   * compile-time error
 ;;; * Null ERROR-WHEN-NOT-FOUND-P and ERRORP-ARG-IN-ACCESSOR-P:
-;;;  * no error/restart facility in reader function
+;;;   * no error/restart facility in reader function
 
 (macrolet ((e () '(error "Internal error - not all args were provided.")))
   (defstruct (namespace (:constructor %make-namespace))
