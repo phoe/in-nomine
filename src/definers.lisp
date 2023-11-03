@@ -228,7 +228,9 @@
                                    (eq (first function)
                                        'lambda))
                               (second function))
-                             (t (error "Malformed function name"))))
+                             (t (error "Malformed function name ~S while ~
+                                        building the definer for ~S"
+                                       function name))))
       `(defmacro ,name (,g!name ,@arglist)
          (declare ,@(mapcar (lambda (k/o-arg)
                               `(ignore ,k/o-arg))
