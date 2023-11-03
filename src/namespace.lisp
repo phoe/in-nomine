@@ -17,11 +17,11 @@
 ;;;
 ;;; Null CONDITION-NAME: no condition is generated, and:
 ;;; * True ERRORP-ARG-IN-ACCESSOR-P:
-;;;  * compile-time-error
+;;;   * compile-time-error
 ;;; * True ERROR-WHEN-NOT-FOUND-P:
 ;;;   * compile-time error
 ;;; * Null ERROR-WHEN-NOT-FOUND-P and ERRORP-ARG-IN-ACCESSOR-P:
-;;;  * no error/restart facility in reader function
+;;;   * no error/restart facility in reader function
 
 (macrolet ((e () '(error "Internal error - not all args were provided.")))
   (defstruct (namespace (:constructor %make-namespace))
@@ -100,18 +100,19 @@
                                              name)
                      :hash-table-test hash-table-test
                      :binding-table
-                     (if (and (null accessor)
-                              (null makunbound-symbol)
-                              (null boundp-symbol))
+                     (if (or (and (null accessor)
+                                  (null makunbound-symbol)
+                                  (null boundp-symbol))
+                             binding-table-var)
                          nil
                          (make-hash-table :test hash-table-test))
                      :documentation-table
                      (if (and documentation-type-p (null documentation-type))
                          nil
                          (make-hash-table :test hash-table-test))
-                     :binding-table-var binding-table-var
                      :definer-name definer-name
                      :definer (or definer (and definer-name t))
+                     :binding-table-var binding-table-var
                      :documentation-table-var documentation-table-var
                      :documentation documentation)))
     (check-namespace-parameters namespace)

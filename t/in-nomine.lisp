@@ -254,7 +254,7 @@
     (let ((accessor (namespace-accessor namespace)))
       (is (eq 'string-stuff accessor))
       (funcall (fdefinition `(setf ,accessor)) "value-1" "key-1")
-      (is (eq "value-1" (funcall accessor "key-1")))
+      (is (equal "value-1" (funcall accessor "key-1")))
       ;; Condition
       (let ((condition-name (namespace-condition-name namespace)))
         (is (eq 'not-enough-stuff condition-name))
@@ -264,10 +264,12 @@
             (handler-bind ((not-enough-stuff #'verify-cell-error-name))
               (funcall accessor "key-2"))))
         ;; Binding table
-        (let ((binding-table (namespace-binding-table namespace)))
-          (is (hash-table-p binding-table))
-          (is (eq "value-1" (gethash "key-1" binding-table)))
-          (is (eq binding-table (symbol-value '*binding-stuff*))))
+        (is (null (namespace-binding-table namespace)))
+        (is (boundp '*binding-stuff*))
+        (locally (declare (special *binding-stuff*))
+          (is (hash-table-p *binding-stuff*))
+          (is (equal "value-1" (gethash "key-1" *binding-stuff*)))
+          (is (eq *binding-stuff* (symbol-value '*binding-stuff*))))
         ;; Boundp
         (let ((boundp-symbol (namespace-boundp-symbol namespace)))
           (is (eq 'stuff-exists-p boundp-symbol))
@@ -281,24 +283,24 @@
         ;; Accessor errorp arg here
         (is (null (funcall accessor "key-1" nil)))
         ;; Accessor default arg
-        (is (eq "value-1" (funcall accessor "key-1" nil "value-1")))
-        (is (eq "value-1" (funcall accessor "key-1" nil))))
+        (is (equal "value-1" (funcall accessor "key-1" nil "value-1")))
+        (is (equal "value-1" (funcall accessor "key-1" nil))))
       ;; CLEAR-NAMESPACE
       (funcall (fdefinition `(setf ,accessor)) "value-2" "key-2")
-      (is (eq "value-1" (funcall accessor "key-1")))
-      (is (eq "value-2" (funcall accessor "key-2")))
+      (is (equal "value-1" (funcall accessor "key-1")))
+      (is (equal "value-2" (funcall accessor "key-2")))
       (clear-namespace 'stuff)
       (signals not-enough-stuff (funcall accessor "key-1"))
       (signals not-enough-stuff (funcall accessor "key-2"))
       ;; Restarts
       (flet ((handle (c) (use-value "value" c)))
-        (is (eq "value" (handler-bind ((not-enough-stuff #'handle))
-                          (funcall accessor "key")))))
+        (is (equal "value" (handler-bind ((not-enough-stuff #'handle))
+                             (funcall accessor "key")))))
       (signals not-enough-stuff (funcall accessor "key"))
       (flet ((handle (c) (store-value "value" c)))
-        (is (eq "value" (handler-bind ((not-enough-stuff #'handle))
-                          (funcall accessor "key")))))
-      (is (eq "value" (funcall accessor "key"))))
+        (is (equal "value" (handler-bind ((not-enough-stuff #'handle))
+                             (funcall accessor "key")))))
+      (is (equal "value" (funcall accessor "key"))))
     ;; Type name
     (let ((type-name (namespace-type-name namespace)))
       (is (eq 'stuff type-name))
@@ -485,3 +487,13 @@
                                  (intern-eql-specializer 'empty)))
              (method (find-method #'(setf documentation) '() specializers nil)))
         (is (null method))))))
+
+(test describe-object-in-namespace
+  (with-namespace (namespace (define-namespace something))
+    (declare (ignore namespace))
+    (let ((docstring "Namespace test - FOO to BAR in SOMETHING"))
+      (setf (symbol-something :foo) :bar
+            (documentation :foo 'something) docstring)
+      (let ((description (with-output-to-string (stream)
+                           (describe-object :foo stream))))
+        (is (search docstring description))))))

@@ -21,9 +21,11 @@ A namespace is a second-class concept in Common Lisp and refers to concept that 
 
 Common Lisp has a lot of namespaces whose keys can come in various shapes:
 
+* interned symbols (package-and-string tuples),
 * variables and symbol macros (symbols),
 * functions and macros (symbols),
 * compiler macros (symbols),
+* `SETF` expansions (Lisp forms),
 * classes, conditions, and types (symbols),
 * slot names (symbols),
 * method combinations (symbols),
@@ -282,7 +284,7 @@ Returns the symbol naming the hash table test of the binding and documentation h
 
 #### Function `NAMESPACE-BINDING-TABLE`
 
-Returns the binding hash table, or `NIL` if no binding mechanism is defined.
+Returns the binding hash table, or `NIL` if `BINDING-TABLE-VAR` is defined or no binding mechanism is defined.
 
 #### Function `NAMESPACE-DOCUMENTATION-TABLE`
 
@@ -290,7 +292,7 @@ Returns the documentation hash table, or `NIL` if no documentation type is defin
 
 #### Function `NAMESPACE-BINDING-TABLE-VAR`
 
-Returns the symbol naming the variable whose value is the binding table of the namespace, or `NIL` if no such variable is defined.
+Returns the symbol naming the variable whose value is the binding table of the namespace, or `NIL` if no such variable is defined. Changing the value or dynamically binding this variable will affect the global environment of the namespace.
 
 #### Function `NAMESPACE-DOCUMENTATION-TABLE-VAR`
 

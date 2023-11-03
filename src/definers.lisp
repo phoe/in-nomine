@@ -62,26 +62,32 @@
 
 (defun make-boundp-forms (namespace)
   (let ((name (namespace-name namespace))
+        (table-symbol (namespace-binding-table-var namespace))
         (boundp (namespace-boundp-symbol namespace)))
     (when boundp
       `((defun ,boundp (name)
           "Automatically defined boundp function."
-          (let* ((namespace (symbol-namespace ',name))
-                 (hash-table (namespace-binding-table namespace)))
+          ,@(when table-symbol `((declare (special ,table-symbol))))
+          (let* ((hash-table ,(or table-symbol
+                                  `(namespace-binding-table
+                                    (symbol-namespace ',name)))))
             (nth-value 1 (gethash name hash-table))))))))
 
 (defun make-makunbound-forms (namespace)
   (let ((name (namespace-name namespace))
+        (table-symbol (namespace-binding-table-var namespace))
         (makunbound (namespace-makunbound-symbol namespace)))
     (when makunbound
       `((defun ,makunbound (name)
           "Automatically defined makunbound function."
+          ,@(when table-symbol `((declare (special ,table-symbol))))
           (,@(if (eq name 'namespace)
                  `(if (eq name 'namespace)
                       (error "Unable to remove the NAMESPACE namespace."))
                  `(progn))
-           (let* ((namespace (symbol-namespace ',name))
-                  (hash-table (namespace-binding-table namespace)))
+           (let* ((hash-table ,(or table-symbol
+                                   `(namespace-binding-table
+                                     (symbol-namespace ',name)))))
              (remhash name hash-table)
              name)))))))
 
@@ -104,12 +110,12 @@
           `((setf (documentation ',name 'namespace) ,documentation))))))
 
 (defun make-binding-table-var-forms (namespace)
-  (let ((name (namespace-name namespace))
-        (table-symbol (namespace-binding-table-var namespace)))
+  (let ((table-symbol (namespace-binding-table-var namespace))
+        (hash-table-test (namespace-hash-table-test namespace)))
     `(,@(when table-symbol
           `((declaim (type hash-table ,table-symbol))
             (defvar ,table-symbol
-              (namespace-binding-table (symbol-namespace ',name))))))))
+              (make-hash-table :test ',hash-table-test)))))))
 
 (defun make-documentation-table-var-forms (namespace)
   (let ((name (namespace-name namespace))
@@ -127,6 +133,7 @@
 
 (defun make-reader-forms (namespace)
   (let ((name (namespace-name namespace))
+        (table-symbol (namespace-binding-table-var namespace))
         (accessor (namespace-accessor namespace))
         (condition (namespace-condition-name namespace))
         (default-errorp (namespace-error-when-not-found-p namespace))
@@ -139,6 +146,7 @@
                     ,@(when default-arg-p `((default nil defaultp))))
           ,@(when errorp-arg-p `((declare (ignorable errorp errorpp))))
           ,@(when default-arg-p `((declare (ignorable default defaultp))))
+          ,@(when table-symbol `((declare (special ,table-symbol))))
           ,(format nil
                    "Automatically defined reader function.~%~
                     ~:[Returns NIL~;Signals ~:*~S~] if the value is not found ~
@@ -148,10 +156,11 @@
                    condition errorp-arg-p default-arg-p)
           ;; We need special treatment for namespace NAMESPACE in order to break
           ;; the metacycle in #'SYMBOL-NAMESPACE.
-          (let* ((namespace ,(if (eq name 'namespace)
-                                 '*namespaces*
-                                  `(symbol-namespace ',name)))
-                 (hash-table (namespace-binding-table namespace)))
+          (let* ((hash-table ,(or table-symbol
+                                  `(namespace-binding-table
+                                    ,(if (eq name 'namespace)
+                                         '*namespaces*
+                                         `(symbol-namespace ',name))))))
             (multiple-value-bind (value foundp) (gethash name hash-table)
               (cond (foundp value)
                     ,@(when default-arg-p
@@ -174,6 +183,7 @@
 
 (defun make-writer-forms (namespace)
   (let ((name (namespace-name namespace))
+        (table-symbol (namespace-binding-table-var namespace))
         (accessor (namespace-accessor namespace))
         (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
         (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
@@ -185,8 +195,10 @@
           "Automatically defined writer function."
           ,@(when errorp-arg-p `((declare (ignore errorp))))
           ,@(when default-arg-p `((declare (ignore default))))
-          (let* ((namespace (symbol-namespace ',name))
-                 (hash-table (namespace-binding-table namespace)))
+          ,@(when table-symbol `((declare (special ,table-symbol))))
+          (let* ((hash-table ,(or table-symbol
+                                  `(namespace-binding-table
+                                    (symbol-namespace ',name)))))
             (setf (gethash name hash-table) new-value)))))))
 
 ;;; Definer forms
