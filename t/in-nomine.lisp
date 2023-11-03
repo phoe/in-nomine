@@ -259,10 +259,12 @@
             (handler-bind ((not-enough-stuff #'verify-cell-error-name))
               (funcall accessor "key-2"))))
         ;; Binding table
-        (let ((binding-table (namespace-binding-table namespace)))
-          (is (hash-table-p binding-table))
-          (is (equal "value-1" (gethash "key-1" binding-table)))
-          (is (eq binding-table (symbol-value '*binding-stuff*))))
+        (is (null (namespace-binding-table namespace)))
+        (is (boundp '*binding-stuff*))
+        (locally (declare (special *binding-stuff*))
+          (is (hash-table-p *binding-stuff*))
+          (is (equal "value-1" (gethash "key-1" *binding-stuff*)))
+          (is (eq *binding-stuff* (symbol-value '*binding-stuff*))))
         ;; Boundp
         (let ((boundp-symbol (namespace-boundp-symbol namespace)))
           (is (eq 'stuff-exists-p boundp-symbol))
