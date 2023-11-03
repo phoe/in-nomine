@@ -157,7 +157,8 @@ DEFAULT argument for automatic setting of unbound values."
 hash tables of the namespace."
 
  (documentation 'namespace-binding-table 'function)
- "Returns the binding hash table, or NIL if no binding mechanism is defined."
+ "Returns the binding hash table, or NIL if BINDING-TABLE-VAR is defined or no
+binding mechanism is defined."
 
  (documentation 'namespace-documentation-table 'function)
  "Returns the documentation hash table, or NIL if no documentation type is
@@ -165,7 +166,9 @@ defined."
 
  (documentation 'namespace-binding-table-var 'function)
  "Returns the symbol naming the variable whose value is the binding table of the
-namespace, or NIL if no such variable is defined."
+namespace, or NIL if no such variable is defined. Changing the value or
+dynamically binding this variable will affect the global environment of the
+namespace."
 
  (documentation 'namespace-documentation-table-var 'function)
  "Returns the symbol naming the variable whose value is the documentation table
