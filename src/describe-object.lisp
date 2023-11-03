@@ -12,25 +12,6 @@
 
 (in-package #:in-nomine)
 
-(defun make-namespace-describer (thing stream)
-  (flet ((describe-symbol-in-namespace (namespace-name namespace)
-           (when (typep thing (namespace-name-type namespace))
-             (when-let* ((boundp-symbol (namespace-boundp-symbol namespace))
-                         (boundp (funcall boundp-symbol thing)))
-               (pprint-logical-block (stream nil)
-                 (format stream "~@:_~S is bound in namespace ~S:"
-                         thing (namespace-name namespace))
-                 (pprint-indent :block 2 stream)
-                 (when-let ((accessor (namespace-accessor namespace)))
-                   (format stream "~@:_Value: ~S" (funcall accessor thing)))
-                 (if-let ((doc (documentation thing namespace-name)))
-                   (progn
-                     (format stream "~@:_Documentation: ~@:_")
-                     (pprint-logical-block (stream nil :per-line-prefix "  ")
-                       (princ doc stream)))
-                   (format stream "~@:_(undocumented)")))))))
-    #'describe-symbol-in-namespace))
-
 (defvar *describe-object-method* nil)
 
 (defmacro with-describe-object-method-handling (&body body)
@@ -61,7 +42,24 @@
 
 (with-describe-object-method-handling
   (defmethod describe-object :after (thing stream)
-    (let ((*print-pretty* t)
-          (describer (make-namespace-describer thing stream)))
-      (pprint-logical-block (stream nil)
-        (maphash describer (namespace-binding-table *namespaces*))))))
+    (flet ((describe-symbol-in-namespace (namespace-name namespace)
+             (when (typep thing (namespace-name-type namespace))
+               (when-let* ((boundp-symbol (namespace-boundp-symbol namespace))
+                           (boundp (funcall boundp-symbol thing)))
+                 (pprint-logical-block (stream nil)
+                   (format stream "~@:_~S is bound in namespace ~S:"
+                           thing (namespace-name namespace))
+                   (pprint-indent :block 2 stream)
+                   (when-let ((accessor (namespace-accessor namespace)))
+                     (format stream "~@:_Value: ~S" (funcall accessor thing)))
+                   (if-let ((doc (documentation thing namespace-name)))
+                     (progn
+                       (format stream "~@:_Documentation: ~@:_")
+                       (pprint-logical-block (stream nil :per-line-prefix "  ")
+                         (princ doc stream)))
+                     (format stream "~@:_(undocumented)")))))))
+      (declare (dynamic-extent #'describe-symbol-in-namespace))
+      (let ((*print-pretty* t))
+        (pprint-logical-block (stream nil)
+          (maphash #'describe-symbol-in-namespace
+                   (namespace-binding-table *namespaces*)))))))

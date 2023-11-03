@@ -405,3 +405,13 @@
                                  (intern-eql-specializer 'empty)))
              (method (find-method #'(setf documentation) '() specializers nil)))
         (is (null method))))))
+
+(test describe-object-in-namespace
+  (with-namespace (namespace (define-namespace something))
+    (declare (ignore namespace))
+    (let ((docstring "Namespace test - FOO to BAR in SOMETHING"))
+      (setf (symbol-something :foo) :bar
+            (documentation :foo 'something) docstring)
+      (let ((description (with-output-to-string (stream)
+                           (describe-object :foo stream))))
+        (is (search docstring description))))))
