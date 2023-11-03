@@ -18,7 +18,10 @@
   (when (eq name 'namespace)
     (cerror "Proceed." "Attempting to clear the namespace of all namespaces."))
   (let* ((namespace (symbol-namespace name))
-         (binding-table (namespace-binding-table namespace))
+         (table-symbol (namespace-binding-table-var namespace))
+         (binding-table (if table-symbol
+                            (symbol-value table-symbol)
+                            (namespace-binding-table namespace)))
          (documentation-table (namespace-documentation-table namespace)))
     (when binding-table (clrhash binding-table))
     (when documentation-table (clrhash documentation-table))
