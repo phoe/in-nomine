@@ -179,7 +179,7 @@
                                (setf (gethash name hash-table)
                                      newval))))))))))))))
 
-;;; Writer foms
+;;; Writer forms
 
 (defun make-writer-forms (namespace)
   (let ((name (namespace-name namespace))
@@ -200,3 +200,87 @@
                                   `(namespace-binding-table
                                     (symbol-namespace ',name)))))
             (setf (gethash name hash-table) new-value)))))))
+
+;;; Definer forms
+
+(defun normalize-arglist (arglist)
+  "Makes sure the argument list contains an &REST parameter for &KEY and
+&OPTIONAL parameters"
+  (multiple-value-bind (required optional rest keywords allow-other-keys? aux
+                        keys?)
+      (parse-ordinary-lambda-list arglist
+                                  :normalize nil)
+    (let ((rest-arg (or rest (gensym "rest"))))
+      (values `(,@required
+                ,@(when optional
+                    `(&optional))
+                ,@optional
+                &rest ,rest-arg
+                ,@(when keys?
+                    `(&key))
+                ,@keywords
+                ,@(when allow-other-keys?
+                    `(&allow-other-keys))
+                ,@(when aux
+                    `(&aux))
+                ,@aux)
+              rest-arg
+              `(,@required ,@(mapcar #'ensure-car
+                                     optional))
+              (mapcar #'ensure-car
+                      keywords)))))
+
+(defun construct-function-definer-form (function name accessor)
+  (let ((g!name (gensym "name")))
+    (multiple-value-bind (arglist rest-argument normal-args k/o-args)
+        (normalize-arglist (cond
+                             ((symbolp function)
+                              (t:arglist function))
+                             ((and (listp function)
+                                   (eq (first function)
+                                       'lambda))
+                              (second function))
+                             (t (error "Malformed function name ~S while ~
+                                        building the definer for ~S"
+                                       function name))))
+      `(defmacro ,name (,g!name ,@arglist)
+         (declare ,@(mapcar (lambda (k/o-arg)
+                              `(ignore ,k/o-arg))
+                            k/o-args))
+         `(setf (,',accessor ',,g!name)
+                (,',(if (and (listp function)
+                             (eq (first function)
+                                 function))
+                        (second function)
+                        function)
+                 ,,@normal-args . ,,rest-argument))))))
+
+(defun make-definer-forms (namespace)
+  (let ((g!name (gensym "name"))
+        (name (namespace-definer-name namespace))
+        (definer (namespace-definer namespace))
+        (accessor (namespace-accessor namespace)))
+    (when name
+      (typecase definer
+        ((eql t)
+         `((defmacro ,name (,g!name obj)
+             `(setf (,',accessor ',,g!name)
+                    ,obj))))
+        (symbol
+         `(,(construct-function-definer-form definer name accessor)))
+        (list
+         (etypecase (first definer)
+           ((or (eql function)
+                (eql quote))
+            `(,(construct-function-definer-form (second definer)
+                                                name accessor)))
+           ((eql lambda)
+            `(,(construct-function-definer-form definer name accessor)))
+           (list
+            `((defmacro ,name (,g!name ,@(first definer))
+                (let ((g!object (gensym "object")))
+                  `(let ((,g!object (progn
+                                      ,,@(rest definer))))
+                     (setf (,',accessor ',,g!name)
+                           ,g!object)
+                     ,g!object)))))))))))

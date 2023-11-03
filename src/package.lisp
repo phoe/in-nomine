@@ -4,6 +4,7 @@
 
 (uiop:define-package #:in-nomine
   (:use #:cl #:alexandria)
+  (:local-nicknames (#:t #:trivial-arguments))
   (:export
    ;; Macros and utility functions
    #:define-namespace
@@ -27,6 +28,8 @@
    #:namespace-documentation-table
    #:namespace-binding-table-var
    #:namespace-documentation-table-var
+   #:namespace-definer-name
+   #:namespace-definer
    ;; Metanamespace accessors
    #:namespace
    #:symbol-namespace

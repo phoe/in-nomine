@@ -41,7 +41,8 @@ Two forms of this macro are provided:
             MAKUNBOUND-SYMBOL BOUNDP-SYMBOL DOCUMENTATION-TYPE
             ERROR-WHEN-NOT-FOUND-P ERRORP-ARG-IN-ACCESSOR-P
             DEFAULT-ARG-IN-ACCESSOR-P HASH-TABLE-TEST
-            BINDING-TABLE-VAR DOCUMENTATION-TABLE-VAR DOCUMENTATION)
+            BINDING-TABLE-VAR DOCUMENTATION-TABLE-VAR DOCUMENTATION
+            DEFINER-NAME DEFINER)
     * NAME - a symbol naming the namespace,
     * NAME-TYPE - a type specifiers for keys bound in this namespace,
     * VALUE-TYPE - a type specifier for values bound in this namespace,
@@ -79,6 +80,24 @@ Two forms of this macro are provided:
                                 be the documentation table of the namespace, or
                                 NIL if no such variable should be defined,
     * DOCUMENTATION - documentation string for the namespace object.
+    * DEFINER-NAME - name of the definer for a definition in the namespace; defaults to DEFINE-[NAME] if a definer is to be defined
+    * DEFINER - can have one of several forms, defines a macro with name
+                [DEFINER-NAME] whose lambda list always starts with a gensymed
+                argument BINDING-NAME for the name of the defined binding
+      * NIL - if no DEFINER-NAME is given, don't define a definer, otherwise
+              define a standard definer with argument list BINDING-NAME OBJECT
+              that binds BINDING-NAME to the result of evaluating OBJECT
+      * T - like NIL, but also defines a definer if DEFINER-NAME has not been
+            supplied
+      * [FUNCTION], '[FUNCTION], #'[FUNCTION] - define a definer with
+                      argument-list BINDING-NAME [LAMBDA-LIST-OF-FUNCTION],
+                      which binds BINDING-NAME to the result of calling
+                      [FUNCTION] on the rest of the arguments
+      * (LAMBDA (ARGS) BODY*) - same as with named functions, but with the given
+                                anonymous function
+      * (LAMBDA-LIST BODY*) - the lambda list can be a generalized lambda list;
+                              body should evaluate to the code executed to
+                              produce the object to bind BINDING-NAME to
 \
 The consequences are undefined if a namespace is redefined in an incompatible
 way with the previous one."

@@ -35,6 +35,8 @@
          (errorp-arg-in-accessor-p nil errorp-arg-in-accessor-pp)
          (default-arg-in-accessor-p nil default-arg-in-accessor-pp)
          (binding-table-var nil binding-table-var-p)
+         (definer-name nil definer-name-p)
+         (definer nil definer-p)
          (documentation-table-var nil documentation-table-var-p)
          documentation)
       args
@@ -58,6 +60,10 @@
         (when hash-table-test-p (c :hash-table-test hash-table-test))
         (when binding-table-var-p
           (c :binding-table-var binding-table-var))
+        (when definer-name-p
+          (c :definer-name definer-name))
+        (when definer-p
+          (c :definer definer))
         (when documentation-table-var-p
           (c :documentation-table-var documentation-table-var)))
       (values arglist documentation))))
@@ -77,4 +83,5 @@
          ,@(make-makunbound-forms namespace)
          ,@(make-documentation-forms namespace documentation)
          ,@(make-documentation-table-var-forms namespace)
+         ,@(make-definer-forms namespace)
          (symbol-namespace ',name)))))

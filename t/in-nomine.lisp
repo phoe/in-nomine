@@ -220,6 +220,9 @@
     ;; Documentation
     (is (string= "A thing namespace." (documentation 'thing 'namespace)))
     (is (string= "A thing namespace." (documentation namespace 't)))
+    ;; Definer
+    (is (null (namespace-definer-name namespace)))
+    (is (null (namespace-definer namespace)))
     (clear-namespace 'thing)))
 
 ;;; Long form tests
@@ -240,7 +243,9 @@
                                :hash-table-test equal
                                :documentation "Stuff."
                                :binding-table-var *binding-stuff*
-                               :documentation-table-var *documentation-stuff*))
+                               :documentation-table-var *documentation-stuff*
+                               :definer-name defstuff
+                               :definer t))
     ;; Return value of DEFINE-NAMESPACE
     (is (typep namespace 'namespace))
     ;; Name
@@ -313,7 +318,77 @@
     (let ((documentation-table (namespace-documentation-table namespace)))
       (is (hash-table-p documentation-table))
       (is (string= "docs" (gethash "key" documentation-table)))
-      (is (eq documentation-table (symbol-value '*documentation-stuff*))))))
+      (is (eq documentation-table (symbol-value '*documentation-stuff*))))
+    ;; Definer
+    (is (eq 'defstuff (namespace-definer-name namespace)))
+    (is (fboundp 'defstuff))
+    (let ((some-stuff (eval '(defstuff "some-stuff" "Hello world"))))
+      (is (string= "Hello world" some-stuff))
+      (is (string= "Hello world" (string-stuff "some-stuff"))))))
+
+(test long-form-definer-default-name
+  (with-namespace (namespace (define-namespace default-definer
+                               :definer t))
+    (is (eq (namespace-definer-name namespace)
+            'define-default-definer))
+    (is (fboundp 'define-default-definer))
+    (let ((some-val (eval '(define-default-definer something 7))))
+      (is (= 7 some-val))
+      (is (= 7 (symbol-default-definer 'something))))))
+
+(test long-form-definer-only-name
+  (with-namespace (namespace (define-namespace only-name
+                               :definer-name defonly))
+    (is (eq (namespace-definer-name namespace)
+            'defonly))
+    (is (fboundp 'defonly))
+    (let ((val (eval '(defonly val 3))))
+      (is (= 3 val))
+      (is (= 3 (symbol-only-name 'val))))))
+
+(test long-form-definer-function
+  (with-namespace (namespace (define-namespace function-definer-simple
+                               :definer cons))
+    (let ((val (eval `(define-function-definer-simple val :a :b))))
+      (is (eq :a (car val)))
+      (is (eq :b (cdr val)))
+      (let ((nval (symbol-function-definer-simple 'val)))
+        (is (eq :a (car nval)))
+        (is (eq :b (cdr nval))))))
+  (with-namespace (namespace (define-namespace function-definer-quoted
+                               :definer 'cons))
+    (let ((val (eval `(define-function-definer-quoted val :a :b))))
+      (is (eq :a (car val)))
+      (is (eq :b (cdr val)))
+      (let ((nval (symbol-function-definer-quoted 'val)))
+        (is (eq :a (car nval)))
+        (is (eq :b (cdr nval))))))
+  (with-namespace (namespace (define-namespace function-definer-fun
+                               :definer #'cons))
+    (let ((val (eval `(define-function-definer-fun val :a :b))))
+      (is (eq :a (car val)))
+      (is (eq :b (cdr val)))
+      (let ((nval (symbol-function-definer-fun 'val)))
+        (is (eq :a (car nval)))
+        (is (eq :b (cdr nval))))))
+  (with-namespace (namespace (define-namespace function-definer-lambda
+                               :definer (lambda (a b)
+                                          (+ a b))))
+    (let ((val (eval `(define-function-definer-lambda val 3 4))))
+      (is (eq 7 val))
+      (is (eq 7 (symbol-function-definer-lambda 'val))))))
+
+(test long-form-definer-macro
+  (with-namespace (namespace (define-namespace function-definer-macro
+                               :definer (((&rest args)
+                                          &body body)
+                                         `(lambda (,@args)
+                                            ,@body))))
+    (let ((f (eval `(define-function-definer-macro f (a b)
+                      (+ a b)))))
+      (is (eq f (symbol-function-definer-macro 'f)))
+      (is (functionp f))
+      (is (= 7 (funcall f 3 4))))))
 
 (test long-form-default-values
   (with-namespace (namespace (define-namespace default
@@ -337,7 +412,10 @@
             namespace-hash-table-test 'eq
             namespace-error-when-not-found-p 't
             namespace-errorp-arg-in-accessor-p 'nil
-            namespace-default-arg-in-accessor-p 't)
+            namespace-default-arg-in-accessor-p 't
+            namespace-definer-name 'nil
+            namespace-definer 'nil)
+      (is (not (fboundp 'define-default)))
       (let ((binding-table (namespace-binding-table namespace)))
         (is (eq 'eq (hash-table-test binding-table)))
         (is (= 0 (hash-table-count binding-table))))
@@ -367,7 +445,9 @@
                                :hash-table-test nil
                                :error-when-not-found-p nil
                                :errorp-arg-in-accessor-p nil
-                               :default-arg-in-accessor-p nil))
+                               :default-arg-in-accessor-p nil
+                               :definer-name nil
+                               :definer nil))
     (macrolet ((frob (&rest args)
                  (loop for (accessor expected) on args by #'cddr
                        collect `(is (eq ,expected (,accessor namespace)))
@@ -387,7 +467,9 @@
             namespace-errorp-arg-in-accessor-p nil
             namespace-default-arg-in-accessor-p nil
             namespace-binding-table nil
-            namespace-documentation-table nil)
+            namespace-documentation-table nil
+            namespace-definer-name nil
+            namespace-definer nil)
       (is (namespace-boundp 'empty))
       (is (not (fboundp 'symbol-empty)))
       (is (not (fboundp 'symbol-makunbound)))
