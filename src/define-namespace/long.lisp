@@ -79,6 +79,7 @@
          ,@(make-unbound-condition-forms namespace)
          ,@(make-reader-forms namespace)
          ,@(make-writer-forms namespace)
+         ,@(make-let-forms namespace)
          ,@(make-boundp-forms namespace)
          ,@(make-makunbound-forms namespace)
          ,@(make-documentation-forms namespace documentation)

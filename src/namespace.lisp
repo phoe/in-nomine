@@ -29,6 +29,8 @@
     (name-type                 (e) :type t       :read-only t)
     (value-type                (e) :type t       :read-only t)
     (accessor                  (e) :type symbol  :read-only t)
+    (macro-accessor            (e) :type symbol  :read-only t)
+    (let-name                  (e) :type symbol  :read-only t)
     (condition-name            (e) :type symbol  :read-only t)
     (type-name                 (e) :type symbol  :read-only t)
     (makunbound-symbol         (e) :type symbol  :read-only t)
@@ -69,6 +71,8 @@
             (name-type 'symbol)
             (value-type 't)
             (accessor (symbolicate '#:symbol- name))
+            (macro-accessor name)
+            (let-name (symbolicate name '#:-let))
             (condition-name (symbolicate '#:unbound- name))
             (type-name (symbolicate name '#:-type))
             (makunbound-symbol (symbolicate name '#:-makunbound))
@@ -89,6 +93,8 @@
          (namespace (%make-namespace
                      :name name :name-type name-type :value-type value-type
                      :accessor accessor
+                     :macro-accessor macro-accessor
+                     :let-name let-name
                      :condition-name condition-name :type-name type-name
                      :makunbound-symbol makunbound-symbol
                      :boundp-symbol boundp-symbol
