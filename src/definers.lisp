@@ -307,6 +307,11 @@
                       append args))
    :test test))
 
+(defun quotedp (form)
+  (and (listp form)
+       (= 2 (length form))
+       (eq (car form) 'quote)))
+
 (defun make-let-forms (namespace)
   (let ((let-name (namespace-let-name namespace))
         (macrolet-name (namespace-macrolet-name namespace))
@@ -411,28 +416,49 @@
                        ,@body))
                   `(progn ,@body)))))
         (defmacro ,progv-name (names values &body body)
-          (with-gensyms (bind bindv save stack unbound-marker)
-            `(let (,stack)
-               (labels ((,save (names)
-                          (dolist (name names)
-                            (push (cons name
-                                        (if (,',boundp name)
-                                            (,',global-accessor name)
-                                            ',unbound-marker))
-                                  ,stack)))
-                        (,bind (stack)
-                          (loop for (name . value) in stack
-                                do (if (eq value ',unbound-marker)
-                                       (,',makunbound name)
-                                       (setf (,',global-accessor name) value))))
-                        (,bindv (names values)
-                          (,save names)
-                          (,bind (loop for name in names
-                                       collect (cons name (if values
-                                                              (pop values)
-                                                              ',unbound-marker))))))
-                 (unwind-protect
-                      (progn
-                        (,bindv ,names ,values)
-                        ,@body)
-                   (,bind ,stack))))))))))
+          (if (and (quotedp names) (quotedp values))
+              (let* ((names (second names))
+                     (values (second values))
+                     (vars (make-gensym-list (length names) "var"))
+                     (unbound-marker (gensym "unbound-marker")))
+                `(let (,@(loop for name in names
+                               for var in vars
+                               collect `(,var (if (,',boundp ',name)
+                                                  (,',global-accessor ',name)
+                                                  ',unbound-marker))))
+                   (unwind-protect
+                        (progn (psetf ,@(loop for name in names
+                                              for value = (pop values)
+                                              collect `(,',global-accessor ',name)
+                                              collect value))
+                               ,@body)
+                     ,@(loop for name in names
+                             for var in vars
+                             collect `(if (eq ,var ',unbound-marker)
+                                          (,',makunbound ',name)
+                                          (setf (,',global-accessor ',name) ,var))))))
+              (with-gensyms (bind bindv save stack unbound-marker)
+                `(let (,stack)
+                   (labels ((,save (names)
+                              (dolist (name names)
+                                (push (cons name
+                                            (if (,',boundp name)
+                                                (,',global-accessor name)
+                                                ',unbound-marker))
+                                      ,stack)))
+                            (,bind (stack)
+                              (loop for (name . value) in stack
+                                    do (if (eq value ',unbound-marker)
+                                           (,',makunbound name)
+                                           (setf (,',global-accessor name) value))))
+                            (,bindv (names values)
+                              (,save names)
+                              (,bind (loop for name in names
+                                           collect (cons name (if values
+                                                                  (pop values)
+                                                                  ',unbound-marker))))))
+                     (unwind-protect
+                          (progn
+                            (,bindv ,names ,values)
+                            ,@body)
+                       (,bind ,stack)))))))))))
