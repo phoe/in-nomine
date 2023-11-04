@@ -33,6 +33,7 @@
     (let-name                  (e) :type symbol  :read-only t)
     (macrolet-name             (e) :type symbol  :read-only t)
     (locally-name              (e) :type symbol  :read-only t)
+    (progv-name                (e) :type symbol  :read-only t)
     (condition-name            (e) :type symbol  :read-only t)
     (type-name                 (e) :type symbol  :read-only t)
     (makunbound-symbol         (e) :type symbol  :read-only t)
@@ -77,6 +78,7 @@
             (let-name (symbolicate name '#:-let))
             (macrolet-name (symbolicate name '#:-macrolet))
             (locally-name (symbolicate name '#:-locally))
+            (progv-name (symbolicate name '#:-progv))
             (condition-name (symbolicate '#:unbound- name))
             (type-name (symbolicate name '#:-type))
             (makunbound-symbol (symbolicate name '#:-makunbound))
@@ -101,6 +103,7 @@
                      :let-name let-name
                      :macrolet-name macrolet-name
                      :locally-name locally-name
+                     :progv-name progv-name
                      :condition-name condition-name :type-name type-name
                      :makunbound-symbol makunbound-symbol
                      :boundp-symbol boundp-symbol

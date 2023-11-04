@@ -311,6 +311,7 @@
   (let ((let-name (namespace-let-name namespace))
         (macrolet-name (namespace-macrolet-name namespace))
         (locally-name (namespace-locally-name namespace))
+        (progv-name (namespace-progv-name namespace))
         (accessor (namespace-macro-accessor namespace))
         (global-accessor (namespace-accessor namespace))
         (boundp (namespace-boundp-symbol namespace))
@@ -402,4 +403,30 @@
                             ,@(loop for name in specials
                                     collect `(',name `(,',',global-accessor ',name ,@args)))
                             (t `(,,',accessor ,name ,@args))))
-                   ,@body)))))))))
+                   ,@body)))))
+        (defmacro ,progv-name (names values &body body)
+          (with-gensyms (bind bindv save stack unbound-marker)
+            `(let (,stack)
+               (labels ((,save (names)
+                          (dolist (name names)
+                            (push (cons name
+                                        (if (,',boundp name)
+                                            (,',global-accessor name)
+                                            ',unbound-marker))
+                                  ,stack)))
+                        (,bind (stack)
+                          (loop for (name . value) in stack
+                                do (if (eq value ',unbound-marker)
+                                       (,',makunbound name)
+                                       (setf (,',global-accessor name) value))))
+                        (,bindv (names values)
+                          (,save names)
+                          (,bind (loop for name in names
+                                       collect (cons name (if values
+                                                              (pop values)
+                                                              ',unbound-marker))))))
+                 (unwind-protect
+                      (progn
+                        (,bindv ,names ,values)
+                        ,@body)
+                   (,bind ,stack))))))))))
