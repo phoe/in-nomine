@@ -11,7 +11,7 @@
            "Michał \"phoe\" Herda <phoe@disroot.org>")
   :mailto "phoe@disroot.org"
   :license "LLGPL"
-  :depends-on (#:alexandria #:trivial-arguments)
+  :depends-on (#:alexandria #:uiop #:trivial-arguments)
   :pathname "src"
   :serial t
   :components ((:file "package")
