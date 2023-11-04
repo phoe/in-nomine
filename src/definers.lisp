@@ -309,6 +309,7 @@
 
 (defun make-let-forms (namespace)
   (let ((let-name (namespace-let-name namespace))
+        (macrolet-name (namespace-macrolet-name namespace))
         (accessor (namespace-macro-accessor namespace))
         (global-accessor (namespace-accessor namespace))
         (boundp (namespace-boundp-symbol namespace))
@@ -382,4 +383,13 @@
                            when special-p
                              collect `(if (eq ,var ',unbound-marker)
                                           (,',makunbound ',name)
-                                          (setf (,',global-accessor ',name) ,var))))))))))))
+                                          (setf (,',global-accessor ',name) ,var))))))))
+        (defmacro ,macrolet-name (macrobindings &body body)
+          `(unwind-protect
+                (progn
+                  (tmlet (,',accessor (name &rest args)
+                           (switch (name :test ,',test)
+                             ,@(loop for (name form) in macrobindings
+                                     collect `(',name ',form))
+                             (t `(,,',accessor ,name ,@args))))
+                    ,@body))))))))
