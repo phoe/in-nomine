@@ -95,7 +95,7 @@
             (documentation-table-var nil)
             (documentation nil))
   (check-namespace-definer-spec definer)
-  (when binding
+  (when (or binding macro-accessor let-name macrolet-name locally-name progv-name)
     (unless macro-accessor
       (setf macro-accessor (gensym (symbol-name name))))
     (unless let-name
