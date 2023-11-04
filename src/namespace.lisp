@@ -95,6 +95,17 @@
             (documentation-table-var nil)
             (documentation nil))
   (check-namespace-definer-spec definer)
+  (when binding
+    (unless macro-accessor
+      (setf macro-accessor (gensym (symbol-name name))))
+    (unless let-name
+      (setf let-name (gensym (concatenate 'string (symbol-name name) "-LET"))))
+    (unless macrolet-name
+      (setf macrolet-name (gensym (concatenate 'string (symbol-name name) "-MACROLET"))))
+    (unless locally-name
+      (setf locally-name (gensym (concatenate 'string (symbol-name name) "-LOCALLY"))))
+    (unless progv-name
+      (setf progv-name (gensym (concatenate 'string (symbol-name name) "-PROGV")))))
   (let* ((definer-name (or definer-name
                            (and definer (symbolicate '#:define- name))))
          (namespace (%make-namespace

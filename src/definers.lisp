@@ -323,12 +323,7 @@
         (default-errorp (namespace-error-when-not-found-p namespace))
         (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
         (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
-    (when (or let-name macrolet-name locally-name progv-name accessor)
-      (setf let-name (or let-name (gensym (with-standard-io-syntax (format nil "~A-LET" name))))
-            macrolet-name (or macrolet-name (gensym (with-standard-io-syntax (format nil "~A-MACROLET" name))))
-            progv-name (or progv-name (gensym (with-standard-io-syntax (format nil "~A-PROGV" name))))
-            locally-name (or locally-name (gensym (with-standard-io-syntax (format nil "~A-LOCALLY" name))))
-            accessor (or accessor (gensym (symbol-name name))))
+    (when (and let-name macrolet-name locally-name progv-name accessor)
       `((defmacro ,accessor (&whole form name
                              &optional
                                ,@(when errorp-arg-p `((errorp ,default-errorp)))
