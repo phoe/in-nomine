@@ -11,7 +11,7 @@ This is a utility for creating, accessing, and managing custom namespaces in Com
 * Removed macros `NAMESPACE-LET` and `NSLET`,
 * Removed the `DEFINE-NAMESPACE` option to automatically generate `NAMESPACE-LET`-based binding macros,
 * Added boundp and makunbound functions for namespace names,
-* Moved hash tables for bindings and documentation from being implicitly created as variables to slots of the namespaces objects themselves,
+* Moved hash tables for bindings and documentation from being implicitly created as variables to slots of the namespaces objects themselves (unless requested otherwise),
 * Added long form of `DEFINE-NAMESPACE` to customize behavior of generated namespaces,
 * Exported namespace objects and their readers.
 
