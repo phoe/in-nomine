@@ -2,7 +2,7 @@
 ;;;; Copyright (c) 2015 Masataro Asai (guicho2.71828@gmail.com),
 ;;;;               2022 Michał "phoe" Herda (phoe@disroot.org)
 
-(uiop:define-package #:in-nomine
+(defpackage #:in-nomine
   (:use #:cl #:alexandria)
   (:local-nicknames (#:t #:trivial-arguments))
   (:export
