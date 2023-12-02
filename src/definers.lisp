@@ -284,3 +284,181 @@
                      (setf (,',accessor ',,g!name)
                            ,g!object)
                      ,g!object)))))))))))
+
+;;; Let form
+
+(defmacro tmlet ((name lambda-list &body body) &body mlet-body
+                &environment env)
+  (let ((transfer (gensym "MLET-TRANSFER")))
+    `(macrolet ((,transfer (&rest args &environment env)
+                  (funcall ,(macro-function name env)
+                           `(,',name ,@args)
+                           env))
+                (,name ,lambda-list
+                  (let ((,name ',transfer))
+                    ,@body)))
+       ,@mlet-body)))
+
+(defun get-declared (declarations decl-type test)
+  (remove-duplicates
+   (loop for (nil . decls) in declarations
+         append (loop for (type . args) in decls
+                      when (eq type decl-type)
+                      append args))
+   :test test))
+
+(defun quotedp (form)
+  (and (listp form)
+       (= 2 (length form))
+       (eq (car form) 'quote)))
+
+(defun make-let-forms (namespace)
+  (let ((let-name (namespace-let-name namespace))
+        (macrolet-name (namespace-macrolet-name namespace))
+        (locally-name (namespace-locally-name namespace))
+        (progv-name (namespace-progv-name namespace))
+        (accessor (namespace-macro-accessor namespace))
+        (global-accessor (namespace-accessor namespace))
+        (boundp (namespace-boundp-symbol namespace))
+        (makunbound (namespace-makunbound-symbol namespace))
+        (namespace-name (namespace-name namespace))
+        (test (namespace-hash-table-test namespace))
+        (condition (namespace-condition-name namespace))
+        (default-errorp (namespace-error-when-not-found-p namespace))
+        (errorp-arg-p (namespace-errorp-arg-in-accessor-p namespace))
+        (default-arg-p (namespace-default-arg-in-accessor-p namespace)))
+    (when (and let-name macrolet-name locally-name progv-name accessor)
+      `((defmacro ,accessor (&whole form name
+                             &optional
+                               ,@(when errorp-arg-p `((errorp ,default-errorp)))
+                               ,@(when default-arg-p `((default nil))))
+          (declare (ignore ,@(when errorp-arg-p `(errorp))
+                           ,@(when default-arg-p `(default))))
+          ,(format nil
+                   "Automatically defined accessor macro.~%~
+                    ~:[Returns NIL~;Signals ~:*~S~] if the value is not found ~
+                    in the namespace~:[~;, unless ERRORP is set to false~].~
+                    ~:[~;~%When DEFAULT is supplied and the symbol is not ~
+                    bound, the default value is automatically set.~]"
+                   condition errorp-arg-p default-arg-p)
+          `(,',global-accessor ',name ,@(cddr form)))
+        (defmacro ,let-name (bindings &body body)
+          (multiple-value-bind (body decls) (parse-body body)
+            (let* ((specials (get-declared decls 'special ',test))
+                   (ignorables (get-declared decls 'ignorable ',test))
+                   (ignored (get-declared decls 'ignore ',test))
+                   (variables (loop for (name value) in (mapcar #'ensure-list bindings)
+                                    collect (list (gensym (with-standard-io-syntax
+                                                            (format nil "~A-~A"
+                                                                    ',namespace-name
+                                                                    name)))
+                                                  value
+                                                  name
+                                                  (member name specials :test ',test)
+                                                  (member name ignorables :test ',test)
+                                                  (member name ignored :test ',test))))
+                   (switch-clauses (loop for (var value name special-p ignorable-p ignore-p) in variables
+                                         unless special-p
+                                           collect `(',name ',var)))
+                   (unbound-marker (gensym (with-standard-io-syntax
+                                             (format nil "~A-UNBOUND" ',namespace-name)))))
+              `(let (,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                             collect (if special-p
+                                         `(,var (if (,',boundp ',name)
+                                                    (,',global-accessor ',name)
+                                                    ',unbound-marker))
+                                         `(,var))))
+                 (declare
+                  (ignorable ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                                     when (or ignore-p ignorable-p)
+                                       collect var)))
+                 (unwind-protect
+                      (progn
+                        (psetf ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                                       collect (if special-p
+                                                   `(,',global-accessor ',name)
+                                                   var)
+                                       collect value))
+                        (tmlet (,',accessor (name &rest args)
+                                 ,(if switch-clauses  ; workaround alexandria's extra style-warning bug
+                                      `(switch (name :test ,',test)
+                                         ,@switch-clauses
+                                         (t `(,,',accessor ,name ,@args)))
+                                      ``(,,',accessor ,name ,@args)))
+                          (,',locally-name
+                           (declare (special ,@specials))
+                           ,@body)))
+                   ,@(loop for (var value name special-p ignorable-p ignore-p) in variables
+                           when special-p
+                             collect `(if (eq ,var ',unbound-marker)
+                                          (,',makunbound ',name)
+                                          (setf (,',global-accessor ',name) ,var))))))))
+        (defmacro ,macrolet-name (macrobindings &body body)
+          (if macrobindings
+              `(progn
+                 (tmlet (,',accessor (name &rest args)
+                          (switch (name :test ,',test)
+                            ,@(loop for (name form) in macrobindings
+                                    collect `(',name ',form))
+                            (t `(,,',accessor ,name ,@args))))
+                   ,@body))
+              `(progn ,@body)))
+        (defmacro ,locally-name (&body body)
+          (multiple-value-bind (body decls) (parse-body body)
+            (let ((specials (get-declared decls 'special ',test)))
+              (if specials
+                  `(progn
+                     (tmlet (,',accessor (name &rest args)
+                              (switch (name :test ,',test)
+                                ,@(loop for name in specials
+                                        collect `(',name `(,',',global-accessor ',name ,@args)))
+                                (t `(,,',accessor ,name ,@args))))
+                       ,@body))
+                  `(progn ,@body)))))
+        (defmacro ,progv-name (names values &body body)
+          (if (and (quotedp names) (quotedp values))
+              (let* ((names (second names))
+                     (values (second values))
+                     (vars (make-gensym-list (length names) "var"))
+                     (unbound-marker (gensym "unbound-marker")))
+                `(let (,@(loop for name in names
+                               for var in vars
+                               collect `(,var (if (,',boundp ',name)
+                                                  (,',global-accessor ',name)
+                                                  ',unbound-marker))))
+                   (unwind-protect
+                        (progn (psetf ,@(loop for name in names
+                                              for value = (pop values)
+                                              collect `(,',global-accessor ',name)
+                                              collect value))
+                               ,@body)
+                     ,@(loop for name in names
+                             for var in vars
+                             collect `(if (eq ,var ',unbound-marker)
+                                          (,',makunbound ',name)
+                                          (setf (,',global-accessor ',name) ,var))))))
+              (with-gensyms (bind bindv save stack unbound-marker)
+                `(let (,stack)
+                   (labels ((,save (names)
+                              (dolist (name names)
+                                (push (cons name
+                                            (if (,',boundp name)
+                                                (,',global-accessor name)
+                                                ',unbound-marker))
+                                      ,stack)))
+                            (,bind (stack)
+                              (loop for (name . value) in stack
+                                    do (if (eq value ',unbound-marker)
+                                           (,',makunbound name)
+                                           (setf (,',global-accessor name) value))))
+                            (,bindv (names values)
+                              (,save names)
+                              (,bind (loop for name in names
+                                           collect (cons name (if values
+                                                                  (pop values)
+                                                                  ',unbound-marker))))))
+                     (unwind-protect
+                          (progn
+                            (,bindv ,names ,values)
+                            ,@body)
+                       (,bind ,stack)))))))))))

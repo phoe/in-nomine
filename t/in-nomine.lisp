@@ -50,17 +50,6 @@
     (is (string= (princ-to-string condition)
                  (format nil "Unable to remove the NAMESPACE namespace.")))))
 
-(test short-form-deprecation-warning
-  (multiple-value-bind (value condition)
-      (ignore-some-conditions (warning)
-        (macroexpand-1 `(define-namespace test-warning-namespace t t)))
-    (is (null value))
-    (is (typep condition 'warning))
-    (is (string= (princ-to-string condition)
-                 (format nil "Deprecated option BINDING used in ~
-                              DEFINE-NAMESPACE: no binding form was ~
-                              generated.")))))
-
 (test macroexpansion-time-errors
   (multiple-value-bind (value condition)
       (ignore-errors (macroexpand-1 `(define-namespace cl:car t)))

@@ -29,6 +29,11 @@
     (name-type                 (e) :type t       :read-only t)
     (value-type                (e) :type t       :read-only t)
     (accessor                  (e) :type symbol  :read-only t)
+    (macro-accessor            (e) :type symbol  :read-only t)
+    (let-name                  (e) :type symbol  :read-only t)
+    (macrolet-name             (e) :type symbol  :read-only t)
+    (locally-name              (e) :type symbol  :read-only t)
+    (progv-name                (e) :type symbol  :read-only t)
     (condition-name            (e) :type symbol  :read-only t)
     (type-name                 (e) :type symbol  :read-only t)
     (makunbound-symbol         (e) :type symbol  :read-only t)
@@ -69,6 +74,12 @@
             (name-type 'symbol)
             (value-type 't)
             (accessor (symbolicate '#:symbol- name))
+            (binding nil)
+            (macro-accessor (when binding name))
+            (let-name (when binding (symbolicate name '#:-let)))
+            (macrolet-name (when binding (symbolicate name '#:-macrolet)))
+            (locally-name (when binding (symbolicate name '#:-locally)))
+            (progv-name (when binding (symbolicate name '#:-progv)))
             (condition-name (symbolicate '#:unbound- name))
             (type-name (symbolicate name '#:-type))
             (makunbound-symbol (symbolicate name '#:-makunbound))
@@ -84,11 +95,27 @@
             (documentation-table-var nil)
             (documentation nil))
   (check-namespace-definer-spec definer)
+  (when (or binding macro-accessor let-name macrolet-name locally-name progv-name)
+    (unless macro-accessor
+      (setf macro-accessor (gensym (symbol-name name))))
+    (unless let-name
+      (setf let-name (gensym (concatenate 'string (symbol-name name) "-LET"))))
+    (unless macrolet-name
+      (setf macrolet-name (gensym (concatenate 'string (symbol-name name) "-MACROLET"))))
+    (unless locally-name
+      (setf locally-name (gensym (concatenate 'string (symbol-name name) "-LOCALLY"))))
+    (unless progv-name
+      (setf progv-name (gensym (concatenate 'string (symbol-name name) "-PROGV")))))
   (let* ((definer-name (or definer-name
                            (and definer (symbolicate '#:define- name))))
          (namespace (%make-namespace
                      :name name :name-type name-type :value-type value-type
                      :accessor accessor
+                     :macro-accessor macro-accessor
+                     :let-name let-name
+                     :macrolet-name macrolet-name
+                     :locally-name locally-name
+                     :progv-name progv-name
                      :condition-name condition-name :type-name type-name
                      :makunbound-symbol makunbound-symbol
                      :boundp-symbol boundp-symbol
