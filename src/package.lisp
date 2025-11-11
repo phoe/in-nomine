@@ -15,6 +15,11 @@
    #:namespace-name-type
    #:namespace-value-type
    #:namespace-accessor
+   #:namespace-macro-accessor
+   #:namespace-let-name
+   #:namespace-macrolet-name
+   #:namespace-locally-name
+   #:namespace-progv-name
    #:namespace-condition-name
    #:namespace-type-name
    #:namespace-makunbound-symbol
