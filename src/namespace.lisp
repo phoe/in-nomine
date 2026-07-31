@@ -53,16 +53,16 @@
               is null."))
     (when (namespace-errorp-arg-in-accessor-p namespace)
       (error "Cannot provide ERRORP-ARG-IN-ACCESSOR-P when CONDITION-NAME ~
-              is null."))))
-
-(defun check-namespace-definer-spec (definer)
-  (assert (typep definer '(or
-                           symbol
-                           (cons (eql function))
-                           (cons (eql quote) (cons symbol null))
-                           (cons (eql lambda) (cons list))
-                           (cons list)))
-          () "Malformed definer ~S" definer))
+              is null.")))
+  (when (namespace-definer-name namespace)
+    (unless (typep (namespace-definer namespace)
+                   '(or (and symbol (not null))
+                        (cons (eql lambda) (cons list))
+                        (cons (member function quote)
+                              (cons (or (and symbol (not null)) (cons (eql lambda) (cons list)))
+                                    null))
+                        (cons list)))
+      (error "Malformed definer ~S" (namespace-definer namespace)))))
 
 (defun make-namespace
     (name &key
@@ -83,7 +83,6 @@
             (definer nil)
             (documentation-table-var nil)
             (documentation nil))
-  (check-namespace-definer-spec definer)
   (let* ((definer-name (or definer-name
                            (and definer (symbolicate '#:define- name))))
          (namespace (%make-namespace

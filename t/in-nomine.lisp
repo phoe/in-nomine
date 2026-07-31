@@ -10,7 +10,8 @@
   ;; Private symbols for testing.
   (:import-from #:in-nomine
                 #:*namespaces*
-                #:ensure-namespace)
+                #:ensure-namespace
+                #:escape-arglist)
   (:import-from #:alexandria
                 #:type=
                 #:ignore-some-conditions)
@@ -497,3 +498,34 @@
       (let ((description (with-output-to-string (stream)
                            (describe-object :foo stream))))
         (is (search docstring description))))))
+
+;;; Arglist derivation for definers
+
+(test escape-arglist
+  (flet ((escape-arglist* (arglist)
+           (multiple-value-bind (arglist vars)
+               (escape-arglist arglist)
+             (let ((string-vars (mapcar #'symbol-name vars)))
+               (values
+                (sublis (mapcar #'cons vars string-vars) arglist)
+                string-vars)))))
+    #+sbcl
+    (is (equal (escape-arglist* '(a b sb-int:&more c d))
+               '(&rest "ARGS")))
+    (is (equal (escape-arglist* :unknown)
+               '(&rest "ARGS")))
+    (is (equal (escape-arglist* '())
+               '()))
+    (is (equal (escape-arglist* '(x . y))
+               '("X" . "Y")))
+    (is (equal (escape-arglist* '((x . y) (z)))
+               '(("X" . "Y") ("Z"))))
+    (is (equal (escape-arglist* '(&optional x (y) ((z)) (q nil q-p) (p 10)))
+               '(&optional "X" "Y" (("Z")) "Q" "P")))
+    (is (equal (escape-arglist* '(&key q (r) ((:x x) 'x xp) (y 'y yp) ((:z (a b &body c)) nil)))
+               '(&key "Q" "R" ((:x "X")) "Y" ((:z ("A" "B" &body "C"))))))
+    (is (equal (escape-arglist* '(&whole form &environment env))
+               '()))
+    (is (equal (escape-arglist* '(&rest kwargs &key &allow-other-keys))
+               '(&rest "KWARGS" &key &allow-other-keys)))))
+

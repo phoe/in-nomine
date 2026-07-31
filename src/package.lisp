@@ -4,7 +4,6 @@
 
 (defpackage #:in-nomine
   (:use #:cl #:alexandria)
-  (:local-nicknames (#:t #:trivial-arguments))
   (:export
    ;; Macros and utility functions
    #:define-namespace
